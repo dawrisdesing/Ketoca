@@ -2013,6 +2013,28 @@ async function markSentConNotificacion(k, method, sets) {
   }
 
   closeModal();
+  // Restaurar datos guardados e iniciar la aplicación
+document.addEventListener('DOMContentLoaded', () => {
+  const savedState = localStorage.getItem('ketoca_state') || localStorage.getItem('s');
+  if (savedState) {
+    try {
+      S = JSON.parse(savedState);
+    } catch(e) {
+      console.error('Error al cargar datos guardados:', e);
+    }
+  }
+
+  if (typeof S !== 'undefined' && S.groups && S.groups.length > 0) {
+    if (typeof startApp === 'function') startApp();
+  } else {
+    const appEl = document.getElementById('app');
+    if (appEl) appEl.style.display = 'flex';
+  }
+
+  if (typeof updateBadges === 'function') {
+    updateBadges();
+  }
+});
 }
 </script>
 </body>
