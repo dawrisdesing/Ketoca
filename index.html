@@ -2010,8 +2010,33 @@ async function markSentConNotificacion(k, method, sets) {
     } catch (e) {
       console.error('No se pudo registrar el pago en Firestore:', e);
     }
+  } function saveName() {
+  const input = document.querySelector('#modal-root input') || document.querySelector('input[placeholder*="nombre" i]') || document.getElementById('nameInput');
+  const name = input ? input.value.trim() : '';
+  
+  if (!name) {
+    alert('Por favor, escribe un nombre.');
+    return;
   }
-
+  
+  // Guardar en localStorage para recordar quién es
+  localStorage.setItem('ketoca_user_name', name);
+  localStorage.setItem('me', name);
+  if (typeof ME !== 'undefined') ME = name;
+  if (typeof S !== 'undefined') {
+    S.userName = name;
+    if (typeof saveState === 'function') saveState();
+  }
+  
+  // Cerrar el modal
+  const modalRoot = document.getElementById('modal-root');
+  if (modalRoot) modalRoot.innerHTML = '';
+  if (typeof closeModal === 'function') closeModal();
+  
+  // Refrescar vistas si existen las funciones
+  if (typeof renderProfile === 'function') renderProfile();
+  if (typeof render === 'function') render();
+}
   closeModal();
   // Restaurar datos guardados e iniciar la aplicación
 document.addEventListener('DOMContentLoaded', () => {
