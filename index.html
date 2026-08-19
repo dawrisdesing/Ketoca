@@ -1934,18 +1934,18 @@ function copyText(txt){
 }
 
 // Inicialización segura de Firebase Cloud Messaging con Service Worker
+// Inicialización segura de Firebase Cloud Messaging con Service Worker
 const firebaseConfig = {
   apiKey: "AIzaSyBNypqpcn3n_UWrP4klwQaengh81741IxGU",
   authDomain: "ketoca-notifications.firebaseapp.com",
   projectId: "ketoca-notifications",
-  storageBucket: "ketoca-notifications.firebasestorage.app",   // ← corregido
+  storageBucket: "ketoca-notifications.firebasestorage.app",
   messagingSenderId: "114583896401",
-  appId: "1:114583896401:web:8e040b1302a59b9f61d370"           // ← corregido
+  appId: "1:114583896401:web:8e040b1302a59b9f61d370"
 };
 
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
-// Inicializar Firestore en el cliente
 const db = firebase.firestore();
 
 // Guardar token al activar notificaciones
@@ -2010,57 +2010,38 @@ async function markSentConNotificacion(k, method, sets) {
     } catch (e) {
       console.error('No se pudo registrar el pago en Firestore:', e);
     }
-  } function saveName() {
-  const input = document.querySelector('#modal-root input') || document.querySelector('input[placeholder*="nombre" i]') || document.getElementById('nameInput');
+  }
+}
+
+// Función global para guardar el nombre de usuario
+function saveName() {
+  const input = document.getElementById('uname-inp') || document.querySelector('#modal-root input');
   const name = input ? input.value.trim() : '';
-  
+
   if (!name) {
     alert('Por favor, escribe un nombre.');
     return;
   }
-  
-  // Guardar en localStorage para recordar quién es
-  localStorage.setItem('ketoca_user_name', name);
-  localStorage.setItem('me', name);
-  if (typeof ME !== 'undefined') ME = name;
-  if (typeof S !== 'undefined') {
-    S.userName = name;
-    if (typeof saveState === 'function') saveState();
-  }
-  
-  // Cerrar el modal
-  const modalRoot = document.getElementById('modal-root');
-  if (modalRoot) modalRoot.innerHTML = '';
-  if (typeof closeModal === 'function') closeModal();
-  
-  // Refrescar vistas si existen las funciones
-  if (typeof renderProfile === 'function') renderProfile();
-  if (typeof render === 'function') render();
-}
+
+  userData.name = name;
+  localStorage.setItem('ketoca_username', name);
+
+  _syncUserIdentity();
   closeModal();
-  // Restaurar datos guardados e iniciar la aplicación
+  render();
+}
+window.saveName = saveName;
+
+// Restaurar datos guardados e iniciar la aplicación
 document.addEventListener('DOMContentLoaded', () => {
-  const savedState = localStorage.getItem('ketoca_state') || localStorage.getItem('s');
-  if (savedState) {
-    try {
-      S = JSON.parse(savedState);
-    } catch(e) {
-      console.error('Error al cargar datos guardados:', e);
-    }
-  }
-
-  if (typeof S !== 'undefined' && S.groups && S.groups.length > 0) {
-    if (typeof startApp === 'function') startApp();
+  S = load();
+  if (S && S.groups && S.groups.length > 0) {
+    startApp();
   } else {
-    const appEl = document.getElementById('app');
-    if (appEl) appEl.style.display = 'flex';
-  }
-
-  if (typeof updateBadges === 'function') {
-    updateBadges();
+    const onboard = document.getElementById('onboard');
+    if (onboard) onboard.style.display = 'flex';
   }
 });
-}
 </script>
 </body>
 </html>
