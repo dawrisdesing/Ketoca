@@ -2,7 +2,7 @@ importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  apiKey: "AIzaSyBNYpqpen3n_UwrP4k1wQaengh8174lIxGU",
+  apiKey: "AIzaSyBNypqpc3n_UWrP4klwQaengh81741IxGU",
   authDomain: "ketoca-notifications.firebaseapp.com",
   projectId: "ketoca-notifications",
   storageBucket: "ketoca-notifications.firebasestorage.app",

@@ -1,50 +1,50 @@
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
-const admin = require("firebase-admin");
+const { onDocumentCreated } = require('firebase-functions/v2/firestore');
+const admin = require('firebase-admin');
 
 admin.initializeApp();
 
-exports.notificarPago = onDocumentCreated("pagos/{pagoId}", async (event) => {
+exports.enviarNotificacionPago = onDocumentCreated('pagos/{pagoId}', async (event) => {
   const snap = event.data;
   if (!snap) {
-    console.log("No hay datos en el evento");
+    console.log('No hay datos asociados al evento.');
     return null;
   }
 
-  const pago = snap.data();
+  const data = snap.data();
+  const receptorId = data.receptorId;
+  const pagador = data.nombrePagador || 'Alguien';
+  const importe = data.importe || '0.00';
+  const grupo = data.nombreGrupo || 'el grupo';
 
   try {
-    // Busca el token en la colección 'tokens' usando el ID del receptor
-    const tokenDoc = await admin
-      .firestore()
-      .collection("tokens")
-      .doc(String(pago.receptorId))
-      .get();
-
-    if (!tokenDoc.exists || !tokenDoc.data().token) {
-      console.log("No hay token para el receptor:", pago.receptorId);
+    // 1. Obtener el token FCM del receptor
+    const tokenDoc = await admin.firestore().collection('tokens').doc(String(receptorId)).get();
+    if (!tokenDoc.exists) {
+      console.log('No hay token registrado para el receptor:', receptorId);
       return null;
     }
 
-    const token = tokenDoc.data().token;
+    const fcmToken = tokenDoc.data().token;
 
-    const mensaje = {
-      token: token,
+    // 2. Construir la notificación push
+    const message = {
+      token: fcmToken,
       notification: {
-        title: "💸 Pago recibido en KETOCA",
-        body: `${pago.nombrePagador} te ha enviado ${pago.importe}€ en ${pago.nombreGrupo}`
+        title: '💸 Pago recibido en KETOCA',
+        body: `${pagador} te ha enviado €${importe} en ${grupo}.`
       },
-      webpush: {
-        fcmOptions: {
-          link: "/"
-        }
+      data: {
+        grupoId: String(data.grupoId || ''),
+        click_action: 'https://www.appketoca.com'
       }
     };
 
-    await admin.messaging().send(mensaje);
-    console.log("Notificación enviada correctamente al receptor:", pago.receptorId);
+    // 3. Enviar el mensaje push
+    const response = await admin.messaging().send(message);
+    console.log('Notificación enviada con éxito:', response);
+    return response;
   } catch (error) {
-    console.error("Error enviando notificación:", error);
+    console.error('Error al enviar notificación FCM:', error);
+    return null;
   }
-
-  return null;
 });

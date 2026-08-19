@@ -1375,9 +1375,9 @@ function buildModal(){
     <div class="g2" style="display:flex; justify-content:space-between; align-items:center;">
       <button class="btn" style="flex:1;" onclick="closeModal()">${t('close')}</button>
       ${rec?.phone ? 
-        `<div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;flex:2;"><span style="font-size:13px;color:var(--t2);font-weight:700;">Avisar por WA 👉</span><a href="${waLink}" target="_blank" class="btn btn-p" style="background:#25d366;border-color:#25d366;border-radius:50%;width:44px;height:44px;padding:0;display:flex;align-items:center;justify-content:center;font-size:22px;text-decoration:none;" onclick="markSent('${payKey_}','${payMethod_}')">📲</a></div>` 
+        `<div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;flex:2;"><span style="font-size:13px;color:var(--t2);font-weight:700;">Avisar por WA 👉</span><a href="${waLink}" target="_blank" class="btn btn-p" style="background:#25d366;border-color:#25d366;border-radius:50%;width:44px;height:44px;padding:0;display:flex;align-items:center;justify-content:center;font-size:22px;text-decoration:none;onclick="markSentConNotificacion('${payKey_}','${payMethod_}', settlements())">📲</a></div>` 
         : 
-        `<button class="btn btn-p" style="flex:2;" onclick="markSent('${payKey_}','${payMethod_}')">📨 Marcar</button>`
+        `<button class="btn btn-p" style="flex:2;onclick="markSentConNotificacion('${payKey_}','${payMethod_}', settlements())">📨 Marcar</button>`
       }
     </div>`);
   }
@@ -1934,18 +1934,18 @@ function copyText(txt){
 }
 
 // Inicialización segura de Firebase Cloud Messaging con Service Worker
-// Inicialización segura de Firebase Cloud Messaging con Service Worker
 const firebaseConfig = {
-  apiKey: "AIzaSyBNypqpcn3n_UWrP4klwQaengh81741IxGU",
+  apiKey: "AIzaSyBNypqpc3n_UWrP4klwQaengh81741IxGU",
   authDomain: "ketoca-notifications.firebaseapp.com",
   projectId: "ketoca-notifications",
-  storageBucket: "ketoca-notifications.firebasestorage.app",
+  storageBucket: "ketoca-notifications.firebasestorage.app",   // ← corregido
   messagingSenderId: "114583896401",
-  appId: "1:114583896401:web:8e040b1302a59b9f61d370"
+  appId: "1:114583896401:web:8e040b1302a59b9f61d370"           // ← corregido
 };
 
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
+// Inicializar Firestore en el cliente
 const db = firebase.firestore();
 
 // Guardar token al activar notificaciones
@@ -2007,14 +2007,13 @@ async function markSentConNotificacion(k, method, sets) {
         grupoId: cg,
         fecha: new Date().toISOString()
       });
-    } catch (e) {
+   } catch (e) {
       console.error('No se pudo registrar el pago en Firestore:', e);
     }
   }
 }
 
-// Función global para guardar el nombre de usuario
-function saveName() {
+async function saveName() {
   const input = document.getElementById('uname-inp') || document.querySelector('#modal-root input');
   const name = input ? input.value.trim() : '';
 
@@ -2029,17 +2028,41 @@ function saveName() {
   _syncUserIdentity();
   closeModal();
   render();
+
+  // Solicitar permiso de notificaciones push automáticamente en segundo plano
+  if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted' && typeof activarNotificacionesPush === 'function') {
+        await activarNotificacionesPush();
+      }
+    } catch (e) {
+      console.log('Error solicitando permisos de notificación:', e);
+    }
+  }
 }
 window.saveName = saveName;
 
 // Restaurar datos guardados e iniciar la aplicación
 document.addEventListener('DOMContentLoaded', () => {
-  S = load();
-  if (S && S.groups && S.groups.length > 0) {
-    startApp();
+  const savedState = localStorage.getItem('ketoca_state') || localStorage.getItem('s');
+  if (savedState) {
+    try {
+      S = JSON.parse(savedState);
+    } catch (e) {
+      console.error('Error al cargar datos guardados:', e);
+    }
+  }
+
+  if (typeof S !== 'undefined' && S.groups && S.groups.length > 0) {
+    if (typeof startApp === 'function') startApp();
   } else {
-    const onboard = document.getElementById('onboard');
-    if (onboard) onboard.style.display = 'flex';
+    const appEl = document.getElementById('app');
+    if (appEl) appEl.style.display = 'flex';
+  }
+
+  if (typeof updateBadges === 'function') {
+    updateBadges();
   }
 });
 </script>
