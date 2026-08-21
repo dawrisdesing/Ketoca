@@ -12,6 +12,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <style>
 :root{
   --accent:#6366f1;--accent-h:#4f46e5;--accent-bg:#eef2ff;--accent-bd:#c7d2fe;
@@ -1232,9 +1233,20 @@ function buildModal(){
     </div>
 
     <div class="sec">${t('personalData')}</div>
-    <div class="ig"><label>${t('fullName')}</label><input type="text" id="u-name" value="${userData.name}" placeholder="ej. Dawris Andres"></div>
-    <div class="ig"><label>${t('email')}</label><input type="email" id="u-email" value="${userData.email}" placeholder="ej. usuario@email.com"></div>
-    <button class="btn btn-p btn-w" onclick="saveUserData()">💾 ${t('saveData')}</button>
+<div class="ig"><label>${t('fullName')}</label><input type="text" id="u-name" value="${userData.name}" placeholder="ej. Dawris Andres"></div>
+<div class="ig"><label>${t('email')}</label><input type="email" id="u-email" value="${userData.email}" placeholder="ej. usuario@email.com"></div>
+<div class="ig"><label>Contraseña</label><input type="password" id="u-pass" placeholder="••••••••"></div>
+
+<div class="g2" style="margin-bottom:10px;">
+  <button class="btn btn-p" onclick="registrarConEmail(document.getElementById('u-email').value, document.getElementById('u-pass').value, document.getElementById('u-name').value)">
+    ✨ Crear cuenta
+  </button>
+  <button class="btn" onclick="iniciarSesionEmail(document.getElementById('u-email').value, document.getElementById('u-pass').value)">
+    🔑 Iniciar sesión
+  </button>
+</div>
+
+${auth.currentUser ? `<button class="btn btn-d btn-w btn-sm" onclick="cerrarSesion()">🚪 Cerrar sesión (${auth.currentUser.email})</button>` : ''}
 
     <div class="div"></div>
     <div class="sec">${t('myProfileGrp')}</div>
@@ -1920,7 +1932,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 const db = firebase.firestore();
-
+const auth = firebase.auth();
 async function activarNotificacionesPush() {
   try {
     const permission = await Notification.requestPermission();
@@ -1956,7 +1968,71 @@ async function activarNotificacionesPush() {
   } catch (error) {
     console.error('Error FCM:', error);
     alert('Error: ' + error.message);
+  } // Registrar usuario nuevo
+async function registrarConEmail(email, password, nombre) {
+  try {
+    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+    const user = userCredential.user;
+    
+    await user.updateProfile({ displayName: nombre });
+    
+    await db.collection('usuarios').doc(user.uid).set({
+      nombre: nombre,
+      email: email,
+      createdAt: new Date().toISOString()
+    }, { merge: true });
+
+    userData.name = nombre;
+    userData.email = email;
+    localStorage.setItem('ketoca_username', nombre);
+    localStorage.setItem('ketoca_email', email);
+    
+    alert('¡Cuenta creada con éxito! 🎉');
+    closeModal();
+    render();
+  } catch (error) {
+    alert('Error al registrarse: ' + error.message);
   }
+}
+
+// Iniciar sesión existente
+async function iniciarSesionEmail(email, password) {
+  try {
+    const userCredential = await auth.signInWithEmailAndPassword(email, password);
+    const user = userCredential.user;
+    
+    userData.name = user.displayName || userData.name;
+    userData.email = user.email || '';
+    localStorage.setItem('ketoca_username', userData.name);
+    localStorage.setItem('ketoca_email', userData.email);
+
+    alert(`¡Bienvenido de nuevo, ${userData.name}! 👋`);
+    closeModal();
+    render();
+  } catch (error) {
+    alert('Error al iniciar sesión: ' + error.message);
+  }
+}
+
+// Cerrar sesión
+async function cerrarSesion() {
+  await auth.signOut();
+  localStorage.removeItem('ketoca_username');
+  localStorage.removeItem('ketoca_email');
+  location.reload();
+}
+
+// Escuchar cambios de sesión automáticos
+auth.onAuthStateChanged(async (user) => {
+  if (user) {
+    userData.name = user.displayName || userData.name;
+    userData.email = user.email || '';
+    localStorage.setItem('ketoca_username', userData.name);
+    localStorage.setItem('ketoca_email', userData.email);
+    _syncUserIdentity();
+    render();
+  }
+});
 }
 
 async function markSentConNotificacion(k, method, sets) {
