@@ -1352,7 +1352,18 @@ if(currentModal==='auth'){
 
     <div class="ig">
       <label>Contraseña</label>
-      <input type="password" id="auth-pass" placeholder="••••••••">
+      <div style="position:relative;display:flex;align-items:center;">
+        <input type="password" id="auth-pass" placeholder="••••••••" style="width:100%;padding-right:42px;">
+        <button type="button" 
+          onmousedown="togglePassVisibility(true)" 
+          onmouseup="togglePassVisibility(false)" 
+          onmouseleave="togglePassVisibility(false)"
+          ontouchstart="togglePassVisibility(true)" 
+          ontouchend="togglePassVisibility(false)" 
+          style="position:absolute;right:8px;background:none;border:none;cursor:pointer;color:var(--t2);padding:6px;display:flex;align-items:center;justify-content:center;">
+          <i class="ti ti-eye" style="font-size:18px;"></i>
+        </button>
+      </div>
     </div>
 
     <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
@@ -1364,7 +1375,7 @@ if(currentModal==='auth'){
     </button>
     `);
   }
-
+  }
   if(currentModal==='pay-method'){
     const sets=settlements();
     const s=sets.find(x=>pkey(x)===payKey_);if(!s)return'';
