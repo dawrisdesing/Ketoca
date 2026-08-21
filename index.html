@@ -1559,22 +1559,46 @@ async function pickContactFromPhone(){
   }
 }
 
-function uploadUserPhoto(input){
-  const file=input.files[0]; if(!file)return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    userData.photo=e.target.result;
+async function uploadUserPhoto(input){
+  const file = input.files[0]; 
+  if(!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = async e => {
+    // 1. Reducir y comprimir la imagen para no superar el límite de Firebase
+    const compressed = await new Promise((resolve) => {
+      const img = new Image();
+      img.src = e.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDim = 240; // Tamaño ideal para avatar
+        let w = img.width, h = img.height;
+        if (w > h) {
+          if (w > maxDim) { h = Math.round((h * maxDim) / w); w = maxDim; }
+        } else {
+          if (h > maxDim) { w = Math.round((w * maxDim) / h); h = maxDim; }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+    });
+
+    // 2. Guardar localmente y sincronizar en la nube
+    userData.photo = compressed;
     localStorage.setItem('ketoca_user_photo', userData.photo);
     renderModal();
     render(true);
-    syncProfile(); // <--- Guarda la foto en la nube
+    await syncProfile();
   };
   reader.readAsDataURL(file);
 }
 
 function saveUserData(){
-  const nm=document.getElementById('u-name')?.value.trim();
-  const em=document.getElementById('u-email')?.value.trim();
+  const nm = document.getElementById('u-name')?.value.trim();
+  const em = document.getElementById('u-email')?.value.trim();
   if(nm) userData.name = nm;
   userData.email = em || '';
   localStorage.setItem('ketoca_username', userData.name);
@@ -1584,12 +1608,13 @@ function saveUserData(){
 }
 
 function previewSupportPhoto(input){
-  const file=input.files[0]; if(!file)return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    supportPhoto=e.target.result;
-    const lbl=document.getElementById('supp-photo-lbl');
-    if(lbl) lbl.innerHTML=`<img src="${e.target.result}" style="max-height:100px;border-radius:8px;display:block;margin:0 auto">`;
+  const file = input.files[0]; 
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    supportPhoto = e.target.result;
+    const lbl = document.getElementById('supp-photo-lbl');
+    if(lbl) lbl.innerHTML = `<img src="${e.target.result}" style="max-height:100px;border-radius:8px;display:block;margin:0 auto">`;
   };
   reader.readAsDataURL(file);
 }
@@ -2022,6 +2047,40 @@ document.addEventListener('touchend', e => {
   }
 }, {passive: true});
 
+// Cierre de ventanas (modales) al deslizar hacia abajo
+let modalStartY = 0;
+document.addEventListener('touchstart', e => {
+  if (currentModal) {
+    modalStartY = e.changedTouches[0].screenY;
+  }
+}, {passive: true});
+
+document.addEventListener('touchend', e => {
+  if (currentModal && modalStartY > 0) {
+    const modalEndY = e.changedTouches[0].screenY;
+    const diffY = modalEndY - modalStartY;
+    // Si desliza el dedo hacia abajo más de 70px, cerramos la ventana
+    if (diffY > 70) {
+      closeModal();
+    }
+    modalStartY = 0;
+  }
+}, {passive: true});
+
+// Soporte para el botón "Atrás" del móvil
+window.addEventListener('popstate', () => {
+  if (currentModal && currentModal !== 'auth') {
+    closeModal();
+  }
+});
+
+// Registrar ventana en el historial para que retroceder no cierre la app
+const originalOpenModal = openModal;
+window.openModal = function(n) {
+  history.pushState({modal: true}, '');
+  originalOpenModal(n);
+};
+
 // Función global para guardar foto y ajustes en la nube (Firebase)
 async function syncProfile() {
   if (auth && auth.currentUser) {
@@ -2223,13 +2282,21 @@ async function iniciarSesionEmail(email, password) {
 async function cerrarSesion() {
   try {
     await auth.signOut();
+    
+    // Borramos TODOS los rastros locales
     localStorage.removeItem('ketoca_username');
     localStorage.removeItem('ketoca_email');
+    localStorage.removeItem('ketoca_user_photo');
+    localStorage.removeItem('ketoca_v2'); 
+    localStorage.removeItem('ketoca_payments');
+    
     userData.name = '';
     userData.email = '';
-    alert('Has cerrado sesión correctamente 👋');
-    currentModal = null;
-    render();
+    userData.photo = null;
+    
+    // Recargar la página fuerza a la app a reiniciarse desde cero
+    // y mostrará la pantalla de inicio de sesión automáticamente
+    location.reload(); 
   } catch (error) {
     alert('Error al cerrar sesión: ' + error.message);
   }
