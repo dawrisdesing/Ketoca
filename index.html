@@ -482,7 +482,22 @@ function load(){
     return r?JSON.parse(r):JSON.parse(JSON.stringify(EMPTY));
   }catch(e){return JSON.parse(JSON.stringify(EMPTY));}
 }
-function save(){try{localStorage.setItem('ketoca_v2',JSON.stringify(S));}catch(e){}}
+async function save(){
+  try {
+    localStorage.setItem('ketoca_v2', JSON.stringify(S));
+  } catch(e){}
+
+  if (auth && auth.currentUser) {
+    try {
+      await db.collection('usuarios').doc(auth.currentUser.uid).set({
+        ketoca_data: S,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch(err) {
+      console.error('Error sincronizando datos con la nube:', err);
+    }
+  }
+}
 
 function loadPayments(){
   try {
@@ -494,15 +509,22 @@ function loadPayments(){
   }catch(e){}
 }
 
-function savePayments(){
+async function savePayments(){
   try {
     localStorage.setItem('ketoca_payments', JSON.stringify(payments));
   }catch(e){}
+
+  if (auth && auth.currentUser) {
+    try {
+      await db.collection('usuarios').doc(auth.currentUser.uid).set({
+        ketoca_payments: payments,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch(err) {
+      console.error('Error sincronizando pagos con la nube:', err);
+    }
+  }
 }
-
-let S=load();
-if(!S.deletedMembers) S.deletedMembers = {};
-
 const gMs=()=>S.members[cg]||[];
 const gGs=()=>S.gastos[cg]||[];
 const mBy=(id,arr)=>(arr||gMs()).find(m=>m.id===id);
@@ -2348,9 +2370,13 @@ document.addEventListener('DOMContentLoaded', () => {
           
           if (d.ketoca_data) {
             S = d.ketoca_data;
-            save();
+            try { localStorage.setItem('ketoca_v2', JSON.stringify(S)); } catch(e){}
           }
           
+          if (d.ketoca_payments) {
+            Object.keys(d.ketoca_payments).forEach(k => payments[k] = d.ketoca_payments[k]);
+            try { localStorage.setItem('ketoca_payments', JSON.stringify(payments)); } catch(e){}
+          }
           if (d.perfil) {
             if (d.perfil.name) {
               userData.name = d.perfil.name;
