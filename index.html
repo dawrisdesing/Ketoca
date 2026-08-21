@@ -1609,6 +1609,19 @@ function sendSupportForm(){
   closeModal();
 }
 
+ function swTab(t,el){
+  activeTab=t;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+  moveIndicator();
+  el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  render();
+}
+window.swTab = swTab;
+
+function swTabDirect(t){
+  activeTab=t;
+  const names=['resumen','gastos','balances','liquidar','miembros'];
   document.querySelectorAll('.tab').forEach((el,i)=>{
     if(names[i]===t){
       el.classList.add('active');
