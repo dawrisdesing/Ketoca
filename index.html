@@ -1323,7 +1323,7 @@ ${auth.currentUser ? `<button class="btn btn-d btn-w btn-sm" onclick="cerrarSesi
     <button class="btn btn-p btn-w" style="background:#25d366;border-color:#25d366;font-size:15px;font-weight:800" onclick="sendSupportForm()">
       ${t('sendWA')}
     </button>`);
-
+} //
     if(currentModal==='auth'){
     return wrap(`
     <div class="mh">
@@ -1608,19 +1608,7 @@ function sendSupportForm(){
   window.open('https://wa.me/34643238497?text='+encodeURIComponent(text),'_blank');
   closeModal();
 }
-function swTab(t,el){
-  activeTab=t;
-  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-  el.classList.add('active');
-  moveIndicator();
-  el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-  render();
-}
-window.swTab = swTab;
 
-function swTabDirect(t){
-  activeTab=t;
-  const names=['resumen','gastos','balances','liquidar','miembros'];
   document.querySelectorAll('.tab').forEach((el,i)=>{
     if(names[i]===t){
       el.classList.add('active');
@@ -2177,7 +2165,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
-}
 </script>
 </body>
 </html>
