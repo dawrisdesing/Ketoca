@@ -181,8 +181,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .pc.sent{background:var(--warn-bg);border-color:var(--warn-bd)}
 .pc.done{background:var(--ok-bg);border-color:var(--ok-bd);opacity:.8}
 .pm{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
-.pmb{border:1.5px solid var(--bd);border-radius:10px;padding:14px 10px;text-align:center;cursor:pointer;font-size:13px;font-weight:700;background:var(--s1);color:var(--t1);transition:all .15s;user-select:none;-webkit-user-select:none;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.pmb *{pointer-events:none;}
+.pmb{border:1.5px solid var(--bd);border-radius:10px;padding:14px 10px;text-align:center;cursor:pointer;font-size:13px;font-weight:700;background:var(--s1);color:var(--t1);transition:all .15s;user-select:none;-webkit-user-select:none;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:manipulation}
+.pmb *{pointer-events:none}
 .pmb:active{border-color:var(--accent);background:var(--accent-bg);color:var(--accent)}
 .ss{display:flex;align-items:center;margin:10px 0 4px}
 .sd{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;font-weight:700}
@@ -1915,11 +1915,45 @@ function delGasto(id){
   render();
 }
 
+function openPayModal(k, m){
+  payKey_ = k;
+  payMethod_ = m;
+  openModal('pay-method');
+}
+
+function payAndNotifyWA(key, method, phone, amount){
+  const cleanPhone = String(phone).replace(/\s+/g, '').replace(/[^0-9+]/g, '');
+  const mName = method === 'bizum' ? 'Bizum' : 'transferencia bancaria';
+  const parsedAmt = parseFloat(amount).toFixed(2);
+  const msg = encodeURIComponent(`¡Hola! Te acabo de enviar €${parsedAmt} por ${mName} desde KETOCA 🤝. Por favor, confírmalo en tu app cuando puedas.`);
+
+  // 1. Marca el pago como enviado inmediatamente en la app
+  payments[key] = { status: 'sent', method: method, sentAt: now() };
+  savePayments();
+  updateBadges();
+
+  // 2. Abre WhatsApp en una pestaña nueva
+  window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
+
+  // 3. Cierra modal y refresca interfaz
+  closeModal();
+  render();
+}
+
 function markSent(k, method){
   payments[k] = { status: 'sent', method, sentAt: now() };
   savePayments();
   updateBadges();
   closeModal();
+  render();
+}
+
+function markSentConNotificacion(key, method){
+  payments[key] = { status: 'sent', method: method, sentAt: now() };
+  savePayments();
+  updateBadges();
+  closeModal();
+  render();
 }
 
 function confirmPay(k){
@@ -1940,7 +1974,7 @@ function dispute(k){
 }
 
 function received(k){
-  payments[k]={status:'confirmed',method:'bizum',confirmedAt:now()};
+  payments[k] = { status: 'confirmed', method: 'bizum', confirmedAt: now() };
   savePayments();
   updateBadges();
   render();
@@ -1951,6 +1985,16 @@ function copyText(txt){
     alert('¡Número copiado al portapapeles!');
   });
 }
+
+// Vinculación global para que todos los botones y modales respondan al clic
+window.openPayModal = openPayModal;
+window.payAndNotifyWA = payAndNotifyWA;
+window.markSent = markSent;
+window.markSentConNotificacion = markSentConNotificacion;
+window.confirmPay = confirmPay;
+window.dispute = dispute;
+window.received = received;
+window.copyText = copyText;
 
 // Inicialización de Firebase
 const firebaseConfig = {
