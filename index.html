@@ -195,7 +195,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .div{border:none;border-top:.5px solid var(--bd);margin:14px 0}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .dc{border:.5px solid var(--bd);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:var(--s1);transition:background .3s}
-.user-avatar-upload{width:72px;height:72px;border-radius:50%;background:var(--accent-bg);border:2px dashed var(--accent-bd);display:flex;align-items:center;justify-content:center;cursor:pointer;margin:0 auto 10px;overflow:hidden;position:relative;background-size:cover;background-position:center}
+.user-avatar-upload{width:72px;height:72px;border-radius:50%;background:var(--accent-bg);border:2px dashed var(--accent-bd);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;margin:0 auto 12px;overflow:hidden;position:relative;background-size:cover;background-position:center;user-select:none;-webkit-user-select:none;}
 .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:.5px solid var(--bd)}
 .dark-toggle{width:40px;height:22px;border-radius:11px;background:var(--s1);border:.5px solid var(--bd);cursor:pointer;position:relative;transition:background .3s;flex-shrink:0}
 .dark-toggle.on{background:var(--accent)}
@@ -439,8 +439,6 @@ function nextTut(){if(tutStep<TUT.length-1){tutStep++;renderTut();}else skipTut(
 function skipTut(){
   tutActive = false;
   document.getElementById('tut-root').innerHTML = '';
-  
-  // Si no está autenticado, abrir directamente la ventana de Login / Registro
   if (!auth.currentUser) {
     openModal('auth');
   }
@@ -465,7 +463,7 @@ let tempGastoState = null;
 let tempGroupState = null;
 
 let userData = {
-  name: localStorage.getItem('ketoca_username') || 'Dawris Andres',
+  name: localStorage.getItem('ketoca_username') || '',
   email: localStorage.getItem('ketoca_email') || '',
   photo: localStorage.getItem('ketoca_user_photo') || null
 };
@@ -518,16 +516,29 @@ function avH(id,sz,arr){
 function pkey(s){return `${cg}-${s.from}-${s.to}-${s.amount}`;}
 
 function _syncUserIdentity() {
+  const whoBtn = document.getElementById('who-btn');
+  const whoAvEl = document.getElementById('who-av');
+  const whoNmEl = document.getElementById('who-nm');
+  const ph = userData.photo || localStorage.getItem('ketoca_user_photo');
+  const curName = userData.name || localStorage.getItem('ketoca_username') || '';
+
+  if (whoAvEl) {
+    if (ph && ph.length > 50) {
+      whoAvEl.innerHTML = `<div class="av" style="width:22px;height:22px;background-image:url(${ph})"></div>`;
+    } else {
+      whoAvEl.innerHTML = '👤';
+    }
+  }
+  if (whoNmEl) {
+    whoNmEl.textContent = curName ? curName.split(' ')[0] : t('who');
+  }
+
   if(cg === null) return;
   const ms = gMs();
-  const myLocalName = (localStorage.getItem('ketoca_username') || userData.name || '').toLowerCase();
+  const myLocalName = curName.toLowerCase();
   
   if(myLocalName) {
     let found = ms.find(m => m.name.toLowerCase().includes(myLocalName) || myLocalName.includes(m.name.toLowerCase()));
-    if(!found) {
-      found = ms.find(m => m.name.toLowerCase().includes('dawris'));
-    }
-    
     if(found) {
       if(ME === null) ME = found.id;
     } else if(ms.length > 0 && ME === null) {
@@ -579,7 +590,7 @@ function setTheme(m, persist){
   }
   
   if(persist) {
-    syncProfile(); // <--- Guarda el tema en la nube
+    syncProfile();
   }
 }
 
@@ -656,20 +667,6 @@ function render(skipModal = false){
   const grp=S.groups.find(x=>x.id===cg);
   const grpNmEl = document.getElementById('grp-nm');
   if(grpNmEl) grpNmEl.textContent = grp ? grp.name : '—';
-  
-  const whoAvEl = document.getElementById('who-av');
-  const whoNmEl = document.getElementById('who-nm');
-  
-  if(whoAvEl) {
-    if(userData.photo){
-      whoAvEl.innerHTML = `<div class="av" style="width:22px;height:22px;background-image:url(${userData.photo})"></div>`;
-    } else {
-      whoAvEl.innerHTML = '👤';
-    }
-  }
-  if(whoNmEl) {
-    whoNmEl.textContent = userData.name ? userData.name.split(' ')[0] : t('who');
-  }
 
   updateBadges();
 
@@ -1122,6 +1119,94 @@ function renderModal(){
 
 function wrap(html){return`<div class="ov" onclick="ovClose(event)"><div class="mb" onclick="event.stopPropagation()"><div class="handle"></div>${html}</div></div>`;}
 
+function triggerUserPhotoUpload(e) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  const inp = document.getElementById('u-photo-inp');
+  if (inp) {
+    inp.value = '';
+    inp.click();
+  }
+}
+
+async function uploadUserPhoto(input){
+  const file = input.files[0]; 
+  if(!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const compressed = await new Promise((resolve) => {
+        const img = new Image();
+        img.src = e.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxDim = 200;
+          let w = img.width, h = img.height;
+          if (w > h) {
+            if (w > maxDim) { h = Math.round((h * maxDim) / w); w = maxDim; }
+          } else {
+            if (h > maxDim) { w = Math.round((w * maxDim) / h); h = maxDim; }
+          }
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.6));
+        };
+        img.onerror = () => resolve(e.target.result);
+      });
+
+      userData.photo = compressed;
+      localStorage.setItem('ketoca_user_photo', userData.photo);
+      
+      _syncUserIdentity();
+      renderModal();
+      if (typeof render === 'function') render(true);
+      await syncProfile();
+    } catch(err) {
+      console.error(err);
+      alert('Error procesando imagen: ' + err.message);
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveUserData(){
+  const nm = document.getElementById('u-name')?.value.trim();
+  const em = document.getElementById('u-email')?.value.trim();
+  if(nm) userData.name = nm;
+  userData.email = em || '';
+  localStorage.setItem('ketoca_username', userData.name);
+  localStorage.setItem('ketoca_email', userData.email);
+  _syncUserIdentity();
+  render(true);
+  syncProfile();
+}
+
+function previewSupportPhoto(input){
+  const file = input.files[0]; 
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    supportPhoto = e.target.result;
+    const lbl = document.getElementById('supp-photo-lbl');
+    if(lbl) lbl.innerHTML = `<img src="${e.target.result}" style="max-height:100px;border-radius:8px;display:block;margin:0 auto">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+function sendSupportForm(){
+  const msg=document.getElementById('supp-msg-inp')?.value.trim();
+  if(!msg){alert('Por favor describe tu consulta o fallo.');return;}
+  let text = `Hola, soy ${userData.name} (Usuario KETOCA) 🤝\n\n📌 Consulta/Reporte:\n${msg}`;
+  if(supportPhoto) text += `\n\n📷 (Tengo una captura del problema lista para adjuntar)`;
+  window.open('https://wa.me/34643238497?text='+encodeURIComponent(text),'_blank');
+  closeModal();
+}
+
 function buildModal(){
   _syncUserIdentity();
   const ms=gMs();
@@ -1181,7 +1266,7 @@ function buildModal(){
                   <div class="sd" style="background:var(--s1); color:var(--t2); width:32px; height:32px; font-size:16px;"><i class="ti ti-clock"></i></div>
                   <div style="flex:1">
                     <div style="font-size:14px; font-weight:700; color:var(--t1)">Pago en espera</div>
-                    <div style="font-size:13px; color:var(--t2); margin-top:2px;">Avisaste a <b>${toName}</b> de que le pagaste <b>${fmt(amt)}</b> en <b>${grpName}</b>. Esperando a que confirme.</div>
+                    <div style="font-size:13px; color:var(--t2); margin-top:2px;">Avisaste a <b>${toName}</b> de que le pagaste <b>${fmt(amt)}</b> en <b>${grpName}</b>.</div>
                     <div style="font-size:11px; color:var(--t3); margin-top:4px;">🕒 ${p.sentAt || 'Recientemente'}</div>
                   </div>
                 </div>
@@ -1220,8 +1305,22 @@ function buildModal(){
   }
 
   if(currentModal==='user-profile'){
+    const ph = userData.photo || localStorage.getItem('ketoca_user_photo');
+    const avatarHtml = (ph && ph.length > 50)
+      ? `<img src="${ph}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;pointer-events:none"><input type="file" id="u-photo-inp" accept="image/*" style="display:none" onchange="uploadUserPhoto(this)" onclick="event.stopPropagation()">`
+      : `<span style="font-size:22px;pointer-events:none">📷</span><span style="font-size:11px;margin-top:4px;color:var(--t2);pointer-events:none">Subir foto</span><input type="file" id="u-photo-inp" accept="image/*" style="display:none" onchange="uploadUserPhoto(this)" onclick="event.stopPropagation()">`;
+
     return wrap(`
-  <div class="sec">${t('personalData')}</div>
+    <div class="mh">
+      <div class="mt2">${t('profileTitle')}</div>
+      <button class="btn btn-sm" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    
+    <div class="user-avatar-upload" onclick="triggerUserPhotoUpload(event)" style="${ph && ph.length > 50 ? 'border:none;padding:0;' : 'border:2px dashed var(--accent-bd);'}">
+      ${avatarHtml}
+    </div>
+    
+    <div class="sec">${t('personalData')}</div>
     ${auth.currentUser ? `
       <div class="card-sm" style="background:var(--s1);margin-bottom:12px">
         <div style="font-size:14px;font-weight:700;color:var(--t1)">${userData.name || 'Usuario'}</div>
@@ -1288,14 +1387,15 @@ function buildModal(){
     <div class="card-sm" style="text-align:center;margin-top:14px;background:var(--s1)">
       <div style="font-size:13px;font-weight:800;color:var(--t1)">KETOCA v2.5</div>
       <div style="font-size:12px;color:var(--t2);margin-top:4px;display:flex;align-items:center;justify-content:center;gap:4px;">
-        Creada en Barcelona con ❤️ por 
+        Creada en Barcelona con ❤️ por
         <a href="https://www.instagram.com/dawrisandres/" target="_blank" style="color:var(--accent);text-decoration:none;font-weight:800;display:inline-flex;align-items:center;gap:2px;">
           <i class="ti ti-brand-instagram"></i>@DAWRIS
         </a>
       </div>
     </div>`);
   }
- if(currentModal==='support'){
+
+  if(currentModal==='support'){
     return wrap(`
     <div class="mh">
       <div class="mt2">${t('supportTitle')}</div>
@@ -1316,8 +1416,9 @@ function buildModal(){
     <button class="btn btn-p btn-w" style="background:#25d366;border-color:#25d366;font-size:15px;font-weight:800" onclick="sendSupportForm()">
       ${t('sendWA')}
     </button>`);
-} //
-    if(currentModal==='auth'){
+  }
+
+  if(currentModal==='auth'){
     return wrap(`
     <div class="mh">
       <div class="mt2" id="auth-title">🔐 Iniciar sesión en KETOCA</div>
@@ -1326,7 +1427,6 @@ function buildModal(){
       Inicia sesión para sincronizar y no perder tus grupos ni tus gastos.
     </div>
 
-    <!-- Pestañas Login / Registro -->
     <div class="seg" style="margin-bottom:14px">
       <div class="sb active" id="btn-tab-login" onclick="toggleAuthTab('login')">🔑 Iniciar sesión</div>
       <div class="sb" id="btn-tab-reg" onclick="toggleAuthTab('register')">✨ Crear cuenta</div>
@@ -1349,7 +1449,7 @@ function buildModal(){
         <button type="button" 
           onmousedown="togglePassVisibility(true)" 
           onmouseup="togglePassVisibility(false)" 
-          onmouseleave="togglePassVisibility(false)"
+          onmouseleave="togglePassVisibility(false)" 
           ontouchstart="togglePassVisibility(true)" 
           ontouchend="togglePassVisibility(false)" 
           style="position:absolute;right:8px;background:none;border:none;cursor:pointer;color:var(--t2);padding:6px;display:flex;align-items:center;justify-content:center;">
@@ -1367,6 +1467,7 @@ function buildModal(){
     </button>
     `);
   }
+
   if(currentModal==='pay-method'){
     const sets=settlements();
     const s=sets.find(x=>pkey(x)===payKey_);if(!s)return'';
@@ -1559,78 +1660,7 @@ async function pickContactFromPhone(){
   }
 }
 
-async function uploadUserPhoto(input){
-  const file = input.files[0]; 
-  if(!file) return;
-  
-  const reader = new FileReader();
-  reader.onload = async e => {
-    // 1. Reducir y comprimir la imagen para que Firestore la guarde al instante
-    const compressed = await new Promise((resolve) => {
-      const img = new Image();
-      img.src = e.target.result;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const maxDim = 240;
-        let w = img.width, h = img.height;
-        if (w > h) {
-          if (w > maxDim) { h = Math.round((h * maxDim) / w); w = maxDim; }
-        } else {
-          if (h > maxDim) { w = Math.round((w * maxDim) / h); h = maxDim; }
-        }
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', 0.7));
-      };
-      img.onerror = () => resolve(e.target.result);
-    });
-
-    // 2. Guardar y actualizar vista
-    userData.photo = compressed;
-    localStorage.setItem('ketoca_user_photo', userData.photo);
-    
-    updateUserModalAvatar();
-    if (typeof render === 'function') render(true);
-    await syncProfile();
-  };
-  reader.readAsDataURL(file);
-}
-
-function saveUserData(){
-  const nm = document.getElementById('u-name')?.value.trim();
-  const em = document.getElementById('u-email')?.value.trim();
-  if(nm) userData.name = nm;
-  userData.email = em || '';
-  localStorage.setItem('ketoca_username', userData.name);
-  localStorage.setItem('ketoca_email', userData.email);
-  _syncUserIdentity();
-  render(true);
-}
-
-function previewSupportPhoto(input){
-  const file = input.files[0]; 
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    supportPhoto = e.target.result;
-    const lbl = document.getElementById('supp-photo-lbl');
-    if(lbl) lbl.innerHTML = `<img src="${e.target.result}" style="max-height:100px;border-radius:8px;display:block;margin:0 auto">`;
-  };
-  reader.readAsDataURL(file);
-}
-
-function sendSupportForm(){
-  const msg=document.getElementById('supp-msg-inp')?.value.trim();
-  if(!msg){alert('Por favor describe tu consulta o fallo.');return;}
-  let text = `Hola, soy ${userData.name} (Usuario KETOCA) 🤝\n\n📌 Consulta/Reporte:\n${msg}`;
-  if(supportPhoto) text += `\n\n📷 (Tengo una captura del problema lista para adjuntar)`;
-  window.open('https://wa.me/34643238497?text='+encodeURIComponent(text),'_blank');
-  closeModal();
-}
-
- function swTab(t,el){
+function swTab(t,el){
   activeTab=t;
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   el.classList.add('active');
@@ -1679,7 +1709,10 @@ function setMe(id){
   });
 }
 
-function openModal(n){currentModal=n;render();}
+function openModal(n){
+  currentModal=n;
+  render();
+}
 function closeModal(){
   if (currentModal === 'auth' && (!auth.currentUser)) {
     return;
@@ -1763,7 +1796,7 @@ function openPayModal(k,m){payKey_=k;payMethod_=m;openModal('pay-method');}
 function setLang(l){
   lang=l;
   localStorage.setItem('ketoca_lang',l);
-  syncProfile(); // <--- Guarda el idioma en la nube
+  syncProfile();
   render();
 }
 
@@ -1952,27 +1985,17 @@ function delGasto(id){
   render();
 }
 
-function openPayModal(k, m){
-  payKey_ = k;
-  payMethod_ = m;
-  openModal('pay-method');
-}
-
 function payAndNotifyWA(key, method, phone, amount){
   const cleanPhone = String(phone).replace(/\s+/g, '').replace(/[^0-9+]/g, '');
   const mName = method === 'bizum' ? 'Bizum' : 'transferencia bancaria';
   const parsedAmt = parseFloat(amount).toFixed(2);
   const msg = encodeURIComponent(`¡Hola! Te acabo de enviar €${parsedAmt} por ${mName} desde KETOCA 🤝. Por favor, confírmalo en tu app cuando puedas.`);
 
-  // 1. Marca el pago como enviado inmediatamente en la app
   payments[key] = { status: 'sent', method: method, sentAt: now() };
   savePayments();
   updateBadges();
 
-  // 2. Abre WhatsApp en una pestaña nueva
   window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
-
-  // 3. Cierra modal y refresca interfaz
   closeModal();
   render();
 }
@@ -2031,25 +2054,24 @@ document.addEventListener('touchstart', e => {
 }, {passive: true});
 
 document.addEventListener('touchend', e => {
-  if (currentModal) return; // Si hay una ventana abierta, no cambiar de pestaña
+  if (currentModal) return;
   const swEndX = e.changedTouches[0].screenX;
   const swEndY = e.changedTouches[0].screenY;
   const diffX = swEndX - swStartX;
   const diffY = swEndY - swStartY;
   
-  // Si el movimiento es horizontal y largo
   if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 60) {
     const tabs = ['resumen','gastos','balances','liquidar','miembros'];
     const idx = tabs.indexOf(activeTab);
     if (diffX < 0 && idx < tabs.length - 1) { 
-      swTabDirect(tabs[idx + 1]); // Desliza a la izquierda -> va a la derecha
+      swTabDirect(tabs[idx + 1]);
     } else if (diffX > 0 && idx > 0) { 
-      swTabDirect(tabs[idx - 1]); // Desliza a la derecha -> va a la izquierda
+      swTabDirect(tabs[idx - 1]);
     }
   }
 }, {passive: true});
 
-// Cierre de ventanas (modales) al deslizar hacia abajo
+// Cierre de modales al deslizar hacia abajo
 let modalStartY = 0;
 document.addEventListener('touchstart', e => {
   if (currentModal) {
@@ -2061,7 +2083,6 @@ document.addEventListener('touchend', e => {
   if (currentModal && modalStartY > 0) {
     const modalEndY = e.changedTouches[0].screenY;
     const diffY = modalEndY - modalStartY;
-    // Si desliza el dedo hacia abajo más de 70px, cerramos la ventana
     if (diffY > 70) {
       closeModal();
     }
@@ -2069,63 +2090,37 @@ document.addEventListener('touchend', e => {
   }
 }, {passive: true});
 
-// Función para pintar la foto dentro del modal de usuario y habilitar el clic
-function updateUserModalAvatar() {
-  const avBox = document.querySelector('.user-avatar-upload');
-  const ph = userData.photo || localStorage.getItem('ketoca_user_photo');
-  if (avBox) {
-    if (ph) {
-      avBox.innerHTML = `<img src="${ph}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;pointer-events:none"><input type="file" id="u-photo-inp" accept="image/*" style="display:none" onchange="uploadUserPhoto(this)">`;
-      avBox.style.border = 'none';
-      avBox.style.padding = '0';
-    } else {
-      avBox.innerHTML = `📷<span style="font-size:11px;margin-top:4px;color:var(--t2);pointer-events:none">Subir foto</span><input type="file" id="u-photo-inp" accept="image/*" style="display:none" onchange="uploadUserPhoto(this)">`;
-      avBox.style.border = '2px dashed var(--accent-bd)';
-    }
-    avBox.onclick = () => {
-      const inp = document.getElementById('u-photo-inp');
-      if (inp) inp.click();
-    };
-  }
-}
-window.updateUserModalAvatar = updateUserModalAvatar;
-
-// Soporte para botón atrás del móvil y refresco automático del modal
+// Soporte para botón atrás
 window.addEventListener('popstate', () => {
   if (currentModal && currentModal !== 'auth') {
     closeModal();
   }
 });
 
-const originalOpenModal = openModal;
-window.openModal = function(n) {
-  history.pushState({modal: true}, '');
-  originalOpenModal(n);
-  if (n === 'user') {
-    updateUserModalAvatar();
-    const nmInp = document.getElementById('u-name');
-    const emInp = document.getElementById('u-email');
-    if (nmInp && userData.name) nmInp.value = userData.name;
-    if (emInp && userData.email) emInp.value = userData.email;
-  }
-};
-
-// Función global para guardar foto y ajustes en la nube (Firebase)
+// Función global para guardar perfil en Firestore
 async function syncProfile() {
   if (auth && auth.currentUser) {
     try {
       await db.collection('usuarios').doc(auth.currentUser.uid).set({
         perfil: {
-          photo: userData.photo || null,
-          themeMode: themeMode,
-          lang: lang
-        }
+          name: userData.name || localStorage.getItem('ketoca_username') || '',
+          email: userData.email || localStorage.getItem('ketoca_email') || '',
+          photo: userData.photo || localStorage.getItem('ketoca_user_photo') || null,
+          themeMode: typeof themeMode !== 'undefined' ? themeMode : 0,
+          lang: typeof lang !== 'undefined' ? lang : 'es'
+        },
+        updatedAt: new Date().toISOString()
       }, { merge: true });
-    } catch(e) { console.error('Error sincronizando perfil', e); }
+    } catch(e) { 
+      console.error('Error sincronizando perfil en Firestore', e); 
+    }
   }
 }
 
-// Vinculación global para que todos los botones y modales respondan al clic
+// Vinculación global
+window.triggerUserPhotoUpload = triggerUserPhotoUpload;
+window.uploadUserPhoto = uploadUserPhoto;
+window.saveUserData = saveUserData;
 window.openPayModal = openPayModal;
 window.payAndNotifyWA = payAndNotifyWA;
 window.markSent = markSent;
@@ -2149,6 +2144,7 @@ firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 const db = firebase.firestore();
 const auth = firebase.auth();
+
 async function activarNotificacionesPush() {
   try {
     const permission = await Notification.requestPermission();
@@ -2208,7 +2204,7 @@ window.toggleAuthTab = function(mode) {
   if(mode === 'register') {
     if(nameCont) nameCont.style.display = 'block';
     if(title) title.textContent = '✨ Crear cuenta en KETOCA';
-    if(sub) sub.textContent = 'Crea tu cuenta. Si ya tenías datos guardados en este móvil, se vincularán automáticamente.';
+    if(sub) sub.textContent = 'Crea tu cuenta. Si ya tenías datos guardados en este dispositivo, se vincularán automáticamente.';
     if(btn) btn.innerHTML = '✨ Crear mi cuenta';
     if(tabLog) tabLog.classList.remove('active');
     if(tabReg) tabReg.classList.add('active');
@@ -2261,14 +2257,13 @@ window.recuperarPassword = async function() {
     alert('Error: ' + e.message);
   }
 };
+
 async function registrarConEmail(email, password, nombre) {
   try {
     const userCredential = await auth.createUserWithEmailAndPassword(email, password);
     const user = userCredential.user;
     
     await user.updateProfile({ displayName: nombre });
-    
-    // Envío del correo de confirmación
     await user.sendEmailVerification();
     
     await db.collection('usuarios').doc(user.uid).set({
@@ -2300,7 +2295,6 @@ async function iniciarSesionEmail(email, password) {
     localStorage.setItem('ketoca_username', userData.name);
     localStorage.setItem('ketoca_email', userData.email);
 
-    alert(`¡Bienvenido de nuevo, ${userData.name}! 👋`);
     currentModal = null;
     render();
   } catch (error) {
@@ -2312,7 +2306,6 @@ async function cerrarSesion() {
   try {
     await auth.signOut();
     
-    // Borramos TODOS los rastros locales
     localStorage.removeItem('ketoca_username');
     localStorage.removeItem('ketoca_email');
     localStorage.removeItem('ketoca_user_photo');
@@ -2323,8 +2316,6 @@ async function cerrarSesion() {
     userData.email = '';
     userData.photo = null;
     
-    // Recargar la página fuerza a la app a reiniciarse desde cero
-    // y mostrará la pantalla de inicio de sesión automáticamente
     location.reload(); 
   } catch (error) {
     alert('Error al cerrar sesión: ' + error.message);
@@ -2355,14 +2346,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (userDoc.exists) {
           const d = userDoc.data();
           
-          // 1. Descargar grupos y gastos
           if (d.ketoca_data) {
             S = d.ketoca_data;
             save();
           }
           
-          // 2. Descargar Foto y Ajustes del Perfil
           if (d.perfil) {
+            if (d.perfil.name) {
+              userData.name = d.perfil.name;
+              localStorage.setItem('ketoca_username', userData.name);
+            }
+            if (d.perfil.email) {
+              userData.email = d.perfil.email;
+              localStorage.setItem('ketoca_email', userData.email);
+            }
             if (d.perfil.photo) {
               userData.photo = d.perfil.photo;
               localStorage.setItem('ketoca_user_photo', userData.photo);
@@ -2378,9 +2375,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           }
         } else if (S && S.groups && S.groups.length > 0) {
-           // Si no hay nube, subimos los datos iniciales
            await db.collection('usuarios').doc(user.uid).set({
              ketoca_data: S,
+             perfil: {
+               name: userData.name || '',
+               email: userData.email || '',
+               photo: userData.photo || null,
+               themeMode: themeMode,
+               lang: lang
+             },
              updatedAt: new Date().toISOString()
            }, { merge: true });
         }
@@ -2389,13 +2392,15 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       startApp();
+      _syncUserIdentity();
+      render(true);
     } else {
       const onboard = document.getElementById('onboard');
       if (onboard) onboard.style.display = 'none';
       const app = document.getElementById('app');
       if (app) app.style.display = 'flex';
       
-     openModal('auth');
+      openModal('auth');
     }
   });
 });
