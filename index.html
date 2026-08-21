@@ -2229,14 +2229,17 @@ window.saveName = saveName;
 document.addEventListener('DOMContentLoaded', () => {
   S = load();
 
-  // Escuchar cuando Firebase verifique el estado de la sesión
   auth.onAuthStateChanged(async (user) => {
     if (user) {
-      // Usuario autenticado con sesión activa
       userData.name = user.displayName || userData.name;
       userData.email = user.email || '';
       localStorage.setItem('ketoca_username', userData.name);
       localStorage.setItem('ketoca_email', userData.email);
+
+      const onboard = document.getElementById('onboard');
+      if (onboard) onboard.style.display = 'none';
+      const app = document.getElementById('app');
+      if (app) app.style.display = 'flex';
 
       try {
         const userDoc = await db.collection('usuarios').doc(user.uid).get();
@@ -2244,7 +2247,6 @@ document.addEventListener('DOMContentLoaded', () => {
           S = userDoc.data().ketoca_data;
           save();
         } else if (S && S.groups && S.groups.length > 0) {
-          // Migrar datos locales previos a Firestore si no existen en la nube
           await db.collection('usuarios').doc(user.uid).set({
             ketoca_data: S,
             updatedAt: new Date().toISOString()
@@ -2256,12 +2258,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       startApp();
     } else {
-      // Usuario no autenticado: bloquear vista y pedir login / registro
+      // Ocultar onboarding y mostrar modal de auth
       const onboard = document.getElementById('onboard');
       if (onboard) onboard.style.display = 'none';
       const app = document.getElementById('app');
       if (app) app.style.display = 'flex';
-      render();
+      
       openModal('auth');
     }
   });
