@@ -437,14 +437,12 @@ function renderTut(){
 }
 function nextTut(){if(tutStep<TUT.length-1){tutStep++;renderTut();}else skipTut();}
 function skipTut(){
-  tutActive=false;
-  document.getElementById('tut-root').innerHTML='';
-  askName();
-}
-
-function askName(){
-  if(!localStorage.getItem('ketoca_username')) {
-    openModal('ask-name');
+  tutActive = false;
+  document.getElementById('tut-root').innerHTML = '';
+  
+  // Si no está autenticado, abrir directamente la ventana de Login / Registro
+  if (!auth.currentUser) {
+    openModal('auth');
   }
 }
 
@@ -1327,12 +1325,44 @@ ${auth.currentUser ? `<button class="btn btn-d btn-w btn-sm" onclick="cerrarSesi
       ${t('sendWA')}
     </button>`);
   }
+if(currentModal==='auth'){
+    return wrap(`
+    <div class="mh">
+      <div class="mt2" id="auth-title">🔐 Iniciar sesión en KETOCA</div>
+    </div>
+    <div style="font-size:13px;color:var(--t2);margin-bottom:14px" id="auth-sub">
+      Inicia sesión para sincronizar y no perder tus grupos ni tus gastos.
+    </div>
 
-  if(currentModal==='ask-name'){
-    return wrap(`<div class="mh"><div class="mt2">👋 ¿Cómo te llamas?</div></div>
-    <div style="font-size:14px;color:var(--t2);margin-bottom:16px">Para personalizar la app con tu nombre.</div>
-    <div class="ig"><label>Tu nombre</label><input type="text" id="uname-inp" placeholder="ej. Dawris Andres" autocomplete="name"></div>
-    <button class="btn btn-p btn-w" onclick="saveName()">✅ Guardar nombre</button>`);
+    <!-- Pestañas Login / Registro -->
+    <div class="seg" style="margin-bottom:14px">
+      <div class="sb active" id="btn-tab-login" onclick="toggleAuthTab('login')">🔑 Iniciar sesión</div>
+      <div class="sb" id="btn-tab-reg" onclick="toggleAuthTab('register')">✨ Crear cuenta</div>
+    </div>
+
+    <div id="auth-name-container" class="ig" style="display:none">
+      <label>${t('fullName')}</label>
+      <input type="text" id="auth-name" placeholder="ej. Dawris Andrés" value="${userData.name || ''}">
+    </div>
+
+    <div class="ig">
+      <label>${t('email')}</label>
+      <input type="email" id="auth-email" placeholder="usuario@email.com" value="${userData.email || ''}">
+    </div>
+
+    <div class="ig">
+      <label>Contraseña</label>
+      <input type="password" id="auth-pass" placeholder="••••••••">
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <a href="javascript:void(0)" onclick="recuperarPassword()" style="font-size:12px;color:var(--accent);text-decoration:none;font-weight:600">¿Olvidaste tu contraseña?</a>
+    </div>
+
+    <button id="auth-submit-btn" class="btn btn-p btn-w" onclick="ejecutarAuth()">
+      🔑 Entrar
+    </button>
+    `);
   }
 
   if(currentModal==='pay-method'){
@@ -1968,6 +1998,65 @@ async function activarNotificacionesPush() {
   } catch (error) {
     console.error('Error FCM:', error);
     alert('Error: ' + error.message);
+  let authMode = 'login';
+
+function toggleAuthTab(mode) {
+  authMode = mode;
+  const nameCont = document.getElementById('auth-name-container');
+  const title = document.getElementById('auth-title');
+  const sub = document.getElementById('auth-sub');
+  const btn = document.getElementById('auth-submit-btn');
+  const tabLog = document.getElementById('btn-tab-login');
+  const tabReg = document.getElementById('btn-tab-reg');
+
+  if(mode === 'register') {
+    if(nameCont) nameCont.style.display = 'block';
+    if(title) title.textContent = '✨ Crear cuenta en KETOCA';
+    if(sub) sub.textContent = 'Crea tu cuenta. Si ya tenías datos guardados en este móvil, se vincularán automáticamente.';
+    if(btn) btn.innerHTML = '✨ Crear mi cuenta';
+    if(tabLog) tabLog.classList.remove('active');
+    if(tabReg) tabReg.classList.add('active');
+  } else {
+    if(nameCont) nameCont.style.display = 'none';
+    if(title) title.textContent = '🔐 Iniciar sesión en KETOCA';
+    if(sub) sub.textContent = 'Inicia sesión para recuperar todos tus grupos y balances.';
+    if(btn) btn.innerHTML = '🔑 Entrar';
+    if(tabReg) tabReg.classList.remove('active');
+    if(tabLog) tabLog.classList.add('active');
+  }
+}
+
+async function ejecutarAuth() {
+  const email = document.getElementById('auth-email')?.value.trim();
+  const pass = document.getElementById('auth-pass')?.value;
+  const name = document.getElementById('auth-name')?.value.trim();
+
+  if(!email || !pass) {
+    alert('Por favor introduce tu correo y contraseña.');
+    return;
+  }
+
+  if(authMode === 'register') {
+    if(!name) { alert('Por favor introduce tu nombre.'); return; }
+    await registrarConEmail(email, pass, name);
+  } else {
+    await iniciarSesionEmail(email, pass);
+  }
+}
+
+async function recuperarPassword() {
+  const email = document.getElementById('auth-email')?.value.trim();
+  if(!email) {
+    alert('Introduce tu correo electrónico en la casilla de arriba para enviarte el enlace de recuperación.');
+    return;
+  }
+  try {
+    await auth.sendPasswordResetEmail(email);
+    alert(`Te hemos enviado un correo a ${email} para restablecer tu contraseña 📩.`);
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
   } // Registrar usuario nuevo
 async function registrarConEmail(email, password, nombre) {
   try {
@@ -2029,6 +2118,27 @@ auth.onAuthStateChanged(async (user) => {
     userData.email = user.email || '';
     localStorage.setItem('ketoca_username', userData.name);
     localStorage.setItem('ketoca_email', userData.email);
+
+    // 1. Comprobar si ya tiene datos en Firestore
+    try {
+      const userDoc = await db.collection('usuarios').doc(user.uid).get();
+      if (userDoc.exists && userDoc.data().ketoca_data) {
+        // Cargar datos de la nube
+        S = userDoc.data().ketoca_data;
+        save();
+      } else {
+        // Si es cuenta nueva y ya tenía datos locales en su móvil, respaldarlos en su cuenta
+        if (S && S.groups && S.groups.length > 0) {
+          await db.collection('usuarios').doc(user.uid).set({
+            ketoca_data: S,
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+        }
+      }
+    } catch(err) {
+      console.log('Error sincronizando datos con la nube:', err);
+    }
+
     _syncUserIdentity();
     render();
   }
