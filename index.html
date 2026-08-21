@@ -2010,9 +2010,16 @@ async function activarNotificacionesPush() {
   } catch (error) {
     console.error('Error FCM:', error);
     alert('Error: ' + error.message);
-  let authMode = 'login';
+ let authMode = 'login';
 
-function toggleAuthTab(mode) {
+window.togglePassVisibility = function(show) {
+  const p = document.getElementById('auth-pass');
+  if (p) {
+    p.type = show ? 'text' : 'password';
+  }
+};
+
+window.toggleAuthTab = function(mode) {
   authMode = mode;
   const nameCont = document.getElementById('auth-name-container');
   const title = document.getElementById('auth-title');
@@ -2036,12 +2043,16 @@ function toggleAuthTab(mode) {
     if(tabReg) tabReg.classList.remove('active');
     if(tabLog) tabLog.classList.add('active');
   }
-}
+};
 
-async function ejecutarAuth() {
-  const email = document.getElementById('auth-email')?.value.trim();
-  const pass = document.getElementById('auth-pass')?.value;
-  const name = document.getElementById('auth-name')?.value.trim();
+window.ejecutarAuth = async function() {
+  const emailInput = document.getElementById('auth-email');
+  const passInput = document.getElementById('auth-pass');
+  const nameInput = document.getElementById('auth-name');
+
+  const email = emailInput ? emailInput.value.trim() : '';
+  const pass = passInput ? passInput.value : '';
+  const name = nameInput ? nameInput.value.trim() : '';
 
   if(!email || !pass) {
     alert('Por favor introduce tu correo y contraseña.');
@@ -2049,17 +2060,21 @@ async function ejecutarAuth() {
   }
 
   if(authMode === 'register') {
-    if(!name) { alert('Por favor introduce tu nombre.'); return; }
+    if(!name) { 
+      alert('Por favor introduce tu nombre completo.'); 
+      return; 
+    }
     await registrarConEmail(email, pass, name);
   } else {
     await iniciarSesionEmail(email, pass);
   }
-}
+};
 
-async function recuperarPassword() {
-  const email = document.getElementById('auth-email')?.value.trim();
+window.recuperarPassword = async function() {
+  const emailInput = document.getElementById('auth-email');
+  const email = emailInput ? emailInput.value.trim() : '';
   if(!email) {
-    alert('Introduce tu correo electrónico en la casilla de arriba para enviarte el enlace de recuperación.');
+    alert('Introduce tu correo electrónico en la casilla para enviarte el enlace de recuperación.');
     return;
   }
   try {
@@ -2068,8 +2083,8 @@ async function recuperarPassword() {
   } catch(e) {
     alert('Error: ' + e.message);
   }
-}
-  } // Registrar usuario nuevo
+};
+
 async function registrarConEmail(email, password, nombre) {
   try {
     const userCredential = await auth.createUserWithEmailAndPassword(email, password);
@@ -2089,14 +2104,13 @@ async function registrarConEmail(email, password, nombre) {
     localStorage.setItem('ketoca_email', email);
     
     alert('¡Cuenta creada con éxito! 🎉');
-    closeModal();
+    currentModal = null;
     render();
   } catch (error) {
     alert('Error al registrarse: ' + error.message);
   }
 }
 
-// Iniciar sesión existente
 async function iniciarSesionEmail(email, password) {
   try {
     const userCredential = await auth.signInWithEmailAndPassword(email, password);
@@ -2108,123 +2122,15 @@ async function iniciarSesionEmail(email, password) {
     localStorage.setItem('ketoca_email', userData.email);
 
     alert(`¡Bienvenido de nuevo, ${userData.name}! 👋`);
-    closeModal();
+    currentModal = null;
     render();
   } catch (error) {
     alert('Error al iniciar sesión: ' + error.message);
   }
 }
 
-// Cerrar sesión
-async function cerrarSesion() {
-  await auth.signOut();
-  localStorage.removeItem('ketoca_username');
-  localStorage.removeItem('ketoca_email');
-  location.reload();
-}
-
-// Escuchar cambios de sesión automáticos
-auth.onAuthStateChanged(async (user) => {
-  if (user) {
-    userData.name = user.displayName || userData.name;
-    userData.email = user.email || '';
-    localStorage.setItem('ketoca_username', userData.name);
-    localStorage.setItem('ketoca_email', userData.email);
-
-    // 1. Comprobar si ya tiene datos en Firestore
-    try {
-      const userDoc = await db.collection('usuarios').doc(user.uid).get();
-      if (userDoc.exists && userDoc.data().ketoca_data) {
-        // Cargar datos de la nube
-        S = userDoc.data().ketoca_data;
-        save();
-      } else {
-        // Si es cuenta nueva y ya tenía datos locales en su móvil, respaldarlos en su cuenta
-        if (S && S.groups && S.groups.length > 0) {
-          await db.collection('usuarios').doc(user.uid).set({
-            ketoca_data: S,
-            updatedAt: new Date().toISOString()
-          }, { merge: true });
-        }
-      }
-    } catch(err) {
-      console.log('Error sincronizando datos con la nube:', err);
-    }
-
-    _syncUserIdentity();
-    render();
-  }
-});
-}
-
-async function markSentConNotificacion(k, method, sets) {
-  payments[k] = { status: 'sent', method, sentAt: now() };
-  savePayments();
-  updateBadges();
-
-  const s = sets.find(x => pkey(x) === k);
-  if (s) {
-    const grp = S.groups.find(x => x.id === cg);
-    try {
-      await db.collection('pagos').add({
-        pagadorId: String(s.from),
-        receptorId: String(s.to),
-        nombrePagador: typeof mNm === 'function' ? mNm(s.from) : 'Alguien',
-        nombreGrupo: grp ? grp.name : 'el grupo',
-        importe: s.amount.toFixed(2),
-        metodo: method,
-        grupoId: cg,
-        fecha: new Date().toISOString()
-      });
-    } catch (e) {
-      console.error('No se pudo registrar el pago en Firestore:', e);
-    }
-  }
-  closeModal();
-}
-
-async function payAndNotifyWA(key, method, phone, amount) {
-  await markSentConNotificacion(key, method, settlements());
-
-  if (phone) {
-    const cleanPhone = phone.replace(/\s+/g, '');
-    const mName = method === 'bizum' ? 'Bizum' : 'transferencia bancaria';
-    const msg = encodeURIComponent(`¡Hola! Te acabo de enviar €${parseFloat(amount).toFixed(2)} por ${mName} desde KETOCA 🤝. Por favor, confírmalo en tu app cuando te llegue.`);
-    window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
-  }
-
-  closeModal();
-  render();
-}
-
-async function saveName() {
-  const input = document.getElementById('uname-inp') || document.querySelector('#modal-root input');
-  const name = input ? input.value.trim() : '';
-
-  if (!name) {
-    alert('Por favor, escribe un nombre.');
-    return;
-  }
-
-  userData.name = name;
-  localStorage.setItem('ketoca_username', name);
-
-  _syncUserIdentity();
-  closeModal();
-  render();
-
-  if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission === 'granted' && typeof activarNotificacionesPush === 'function') {
-        await activarNotificacionesPush();
-      }
-    } catch (e) {
-      console.log('Error solicitando permisos de notificación:', e);
-    }
-  }
-}
-window.saveName = saveName;
+window.registrarConEmail = registrarConEmail;
+window.iniciarSesionEmail = iniciarSesionEmail;
 
 document.addEventListener('DOMContentLoaded', () => {
   S = load();
@@ -2258,13 +2164,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       startApp();
     } else {
-      // Ocultar onboarding y mostrar modal de auth
       const onboard = document.getElementById('onboard');
       if (onboard) onboard.style.display = 'none';
       const app = document.getElementById('app');
       if (app) app.style.display = 'flex';
       
-     openModal('auth');
+      openModal('auth');
     }
   });
 });
