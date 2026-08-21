@@ -1649,12 +1649,15 @@ function setMe(id){
 
 function openModal(n){currentModal=n;render();}
 function closeModal(){
-  currentModal=null;
-  payKey_=null;
-  payMethod_=null;
-  gastoPhoto=null;
-  supportPhoto=null;
-  tempGroupState=null;
+  if (currentModal === 'auth' && (!auth.currentUser)) {
+    return;
+  }
+  currentModal = null;
+  payKey_ = null;
+  payMethod_ = null;
+  gastoPhoto = null;
+  supportPhoto = null;
+  tempGroupState = null;
   render();
 }
 function ovClose(e){if(e.target===e.currentTarget)closeModal();}
@@ -2216,13 +2219,45 @@ window.saveName = saveName;
 
 document.addEventListener('DOMContentLoaded', () => {
   S = load();
-  if (S && S.groups && S.groups.length > 0) {
-    startApp();
-  } else {
-    const onboard = document.getElementById('onboard');
-    if (onboard) onboard.style.display = 'flex';
-  }
+
+  // Escuchar cuando Firebase verifique el estado de la sesión
+  auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      // Usuario autenticado con sesión activa
+      userData.name = user.displayName || userData.name;
+      userData.email = user.email || '';
+      localStorage.setItem('ketoca_username', userData.name);
+      localStorage.setItem('ketoca_email', userData.email);
+
+      try {
+        const userDoc = await db.collection('usuarios').doc(user.uid).get();
+        if (userDoc.exists && userDoc.data().ketoca_data) {
+          S = userDoc.data().ketoca_data;
+          save();
+        } else if (S && S.groups && S.groups.length > 0) {
+          // Migrar datos locales previos a Firestore si no existen en la nube
+          await db.collection('usuarios').doc(user.uid).set({
+            ketoca_data: S,
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+        }
+      } catch (err) {
+        console.log('Error sincronizando con Firestore:', err);
+      }
+
+      startApp();
+    } else {
+      // Usuario no autenticado: bloquear vista y pedir login / registro
+      const onboard = document.getElementById('onboard');
+      if (onboard) onboard.style.display = 'none';
+      const app = document.getElementById('app');
+      if (app) app.style.display = 'flex';
+      render();
+      openModal('auth');
+    }
+  });
 });
+
 </script>
 </body>
 </html>
