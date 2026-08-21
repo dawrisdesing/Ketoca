@@ -181,7 +181,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .pc.sent{background:var(--warn-bg);border-color:var(--warn-bd)}
 .pc.done{background:var(--ok-bg);border-color:var(--ok-bd);opacity:.8}
 .pm{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
-.pmb{border:1.5px solid var(--bd);border-radius:10px;padding:14px 10px;text-align:center;cursor:pointer;font-size:13px;font-weight:700;background:var(--s1);color:var(--t1);transition:all .15s;user-select:none;-webkit-user-select:none;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:manipulation}
+.pmb{position:relative;z-index:10;border:1.5px solid var(--bd);border-radius:10px;padding:14px 10px;text-align:center;cursor:pointer;font-size:13px;font-weight:700;background:var(--s1);color:var(--t1);transition:all .15s;user-select:none;-webkit-user-select:none;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:manipulation}
 .pmb *{pointer-events:none}
 .pmb:active{border-color:var(--accent);background:var(--accent-bg);color:var(--accent)}
 .ss{display:flex;align-items:center;margin:10px 0 4px}
@@ -576,6 +576,10 @@ function setTheme(m, persist){
   const buttons = document.querySelectorAll('#theme-seg .sb');
   if(buttons.length === 3) {
     buttons.forEach((btn, i) => btn.classList.toggle('active', i === m));
+  }
+  
+  if(persist) {
+    syncProfile(); // <--- Guarda el tema en la nube
   }
 }
 
@@ -1563,6 +1567,7 @@ function uploadUserPhoto(input){
     localStorage.setItem('ketoca_user_photo', userData.photo);
     renderModal();
     render(true);
+    syncProfile(); // <--- Guarda la foto en la nube
   };
   reader.readAsDataURL(file);
 }
@@ -1728,7 +1733,12 @@ function buildModalContentForRemove(){
 function openRemove(id){removingId=id;assumeMode='existing';assumeId=null;newMemberName='';openModal('remove-member');}
 function openDelGrp(id){delGrpId=id;openModal('del-group');}
 function openPayModal(k,m){payKey_=k;payMethod_=m;openModal('pay-method');}
-function setLang(l){lang=l;localStorage.setItem('ketoca_lang',l);render();}
+function setLang(l){
+  lang=l;
+  localStorage.setItem('ketoca_lang',l);
+  syncProfile(); // <--- Guarda el idioma en la nube
+  render();
+}
 
 function confirmDelGrp(){
   const g=S.groups.find(x=>x.id===delGrpId);if(!g)return;
@@ -1986,6 +1996,47 @@ function copyText(txt){
   });
 }
 
+// Navegación lateral con gestos (Swipe)
+let swStartX = 0, swStartY = 0;
+document.addEventListener('touchstart', e => {
+  swStartX = e.changedTouches[0].screenX;
+  swStartY = e.changedTouches[0].screenY;
+}, {passive: true});
+
+document.addEventListener('touchend', e => {
+  if (currentModal) return; // Si hay una ventana abierta, no cambiar de pestaña
+  const swEndX = e.changedTouches[0].screenX;
+  const swEndY = e.changedTouches[0].screenY;
+  const diffX = swEndX - swStartX;
+  const diffY = swEndY - swStartY;
+  
+  // Si el movimiento es horizontal y largo
+  if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 60) {
+    const tabs = ['resumen','gastos','balances','liquidar','miembros'];
+    const idx = tabs.indexOf(activeTab);
+    if (diffX < 0 && idx < tabs.length - 1) { 
+      swTabDirect(tabs[idx + 1]); // Desliza a la izquierda -> va a la derecha
+    } else if (diffX > 0 && idx > 0) { 
+      swTabDirect(tabs[idx - 1]); // Desliza a la derecha -> va a la izquierda
+    }
+  }
+}, {passive: true});
+
+// Función global para guardar foto y ajustes en la nube (Firebase)
+async function syncProfile() {
+  if (auth && auth.currentUser) {
+    try {
+      await db.collection('usuarios').doc(auth.currentUser.uid).set({
+        perfil: {
+          photo: userData.photo || null,
+          themeMode: themeMode,
+          lang: lang
+        }
+      }, { merge: true });
+    } catch(e) { console.error('Error sincronizando perfil', e); }
+  }
+}
+
 // Vinculación global para que todos los botones y modales respondan al clic
 window.openPayModal = openPayModal;
 window.payAndNotifyWA = payAndNotifyWA;
@@ -2205,14 +2256,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
       try {
         const userDoc = await db.collection('usuarios').doc(user.uid).get();
-        if (userDoc.exists && userDoc.data().ketoca_data) {
-          S = userDoc.data().ketoca_data;
-          save();
+        if (userDoc.exists) {
+          const d = userDoc.data();
+          
+          // 1. Descargar grupos y gastos
+          if (d.ketoca_data) {
+            S = d.ketoca_data;
+            save();
+          }
+          
+          // 2. Descargar Foto y Ajustes del Perfil
+          if (d.perfil) {
+            if (d.perfil.photo) {
+              userData.photo = d.perfil.photo;
+              localStorage.setItem('ketoca_user_photo', userData.photo);
+            }
+            if (d.perfil.themeMode !== undefined) {
+              themeMode = d.perfil.themeMode;
+              localStorage.setItem('ketoca_theme', themeMode.toString());
+              setTheme(themeMode, false);
+            }
+            if (d.perfil.lang !== undefined) {
+              lang = d.perfil.lang;
+              localStorage.setItem('ketoca_lang', lang);
+            }
+          }
         } else if (S && S.groups && S.groups.length > 0) {
-          await db.collection('usuarios').doc(user.uid).set({
-            ketoca_data: S,
-            updatedAt: new Date().toISOString()
-          }, { merge: true });
+           // Si no hay nube, subimos los datos iniciales
+           await db.collection('usuarios').doc(user.uid).set({
+             ketoca_data: S,
+             updatedAt: new Date().toISOString()
+           }, { merge: true });
         }
       } catch (err) {
         console.log('Error sincronizando con Firestore:', err);
