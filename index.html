@@ -1302,8 +1302,7 @@ ${auth.currentUser ? `<button class="btn btn-d btn-w btn-sm" onclick="cerrarSesi
       </div>
     </div>`);
   }
-
-  if(currentModal==='support'){
+ if(currentModal==='support'){
     return wrap(`
     <div class="mh">
       <div class="mt2">${t('supportTitle')}</div>
@@ -1324,8 +1323,8 @@ ${auth.currentUser ? `<button class="btn btn-d btn-w btn-sm" onclick="cerrarSesi
     <button class="btn btn-p btn-w" style="background:#25d366;border-color:#25d366;font-size:15px;font-weight:800" onclick="sendSupportForm()">
       ${t('sendWA')}
     </button>`);
-  }
-if(currentModal==='auth'){
+
+    if(currentModal==='auth'){
     return wrap(`
     <div class="mh">
       <div class="mt2" id="auth-title">🔐 Iniciar sesión en KETOCA</div>
@@ -1374,7 +1373,6 @@ if(currentModal==='auth'){
       🔑 Entrar
     </button>
     `);
-  }
   }
   if(currentModal==='pay-method'){
     const sets=settlements();
