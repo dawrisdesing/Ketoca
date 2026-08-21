@@ -1565,13 +1565,13 @@ async function uploadUserPhoto(input){
   
   const reader = new FileReader();
   reader.onload = async e => {
-    // 1. Reducir y comprimir la imagen para no superar el límite de Firebase
+    // 1. Reducir y comprimir la imagen para que Firestore la guarde al instante
     const compressed = await new Promise((resolve) => {
       const img = new Image();
       img.src = e.target.result;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const maxDim = 240; // Tamaño ideal para avatar
+        const maxDim = 240;
         let w = img.width, h = img.height;
         if (w > h) {
           if (w > maxDim) { h = Math.round((h * maxDim) / w); w = maxDim; }
@@ -1584,13 +1584,15 @@ async function uploadUserPhoto(input){
         ctx.drawImage(img, 0, 0, w, h);
         resolve(canvas.toDataURL('image/jpeg', 0.7));
       };
+      img.onerror = () => resolve(e.target.result);
     });
 
-    // 2. Guardar localmente y sincronizar en la nube
+    // 2. Guardar y actualizar vista
     userData.photo = compressed;
     localStorage.setItem('ketoca_user_photo', userData.photo);
-    renderModal();
-    render(true);
+    
+    updateUserModalAvatar();
+    if (typeof render === 'function') render(true);
     await syncProfile();
   };
   reader.readAsDataURL(file);
@@ -2067,18 +2069,45 @@ document.addEventListener('touchend', e => {
   }
 }, {passive: true});
 
-// Soporte para el botón "Atrás" del móvil
+// Función para pintar la foto dentro del modal de usuario y habilitar el clic
+function updateUserModalAvatar() {
+  const avBox = document.querySelector('.user-avatar-upload');
+  const ph = userData.photo || localStorage.getItem('ketoca_user_photo');
+  if (avBox) {
+    if (ph) {
+      avBox.innerHTML = `<img src="${ph}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;pointer-events:none"><input type="file" id="u-photo-inp" accept="image/*" style="display:none" onchange="uploadUserPhoto(this)">`;
+      avBox.style.border = 'none';
+      avBox.style.padding = '0';
+    } else {
+      avBox.innerHTML = `📷<span style="font-size:11px;margin-top:4px;color:var(--t2);pointer-events:none">Subir foto</span><input type="file" id="u-photo-inp" accept="image/*" style="display:none" onchange="uploadUserPhoto(this)">`;
+      avBox.style.border = '2px dashed var(--accent-bd)';
+    }
+    avBox.onclick = () => {
+      const inp = document.getElementById('u-photo-inp');
+      if (inp) inp.click();
+    };
+  }
+}
+window.updateUserModalAvatar = updateUserModalAvatar;
+
+// Soporte para botón atrás del móvil y refresco automático del modal
 window.addEventListener('popstate', () => {
   if (currentModal && currentModal !== 'auth') {
     closeModal();
   }
 });
 
-// Registrar ventana en el historial para que retroceder no cierre la app
 const originalOpenModal = openModal;
 window.openModal = function(n) {
   history.pushState({modal: true}, '');
   originalOpenModal(n);
+  if (n === 'user') {
+    updateUserModalAvatar();
+    const nmInp = document.getElementById('u-name');
+    const emInp = document.getElementById('u-email');
+    if (nmInp && userData.name) nmInp.value = userData.name;
+    if (emInp && userData.email) emInp.value = userData.email;
+  }
 };
 
 // Función global para guardar foto y ajustes en la nube (Firebase)
