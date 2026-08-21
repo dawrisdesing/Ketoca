@@ -1608,7 +1608,6 @@ function sendSupportForm(){
   window.open('https://wa.me/34643238497?text='+encodeURIComponent(text),'_blank');
   closeModal();
 }
-
 function swTab(t,el){
   activeTab=t;
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
@@ -1617,6 +1616,8 @@ function swTab(t,el){
   el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
   render();
 }
+window.swTab = swTab;
+
 function swTabDirect(t){
   activeTab=t;
   const names=['resumen','gastos','balances','liquidar','miembros'];
