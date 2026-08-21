@@ -2007,10 +2007,13 @@ async function activarNotificacionesPush() {
     } else {
       alert('No se pudo obtener el token del dispositivo.');
     }
-  } catch (error) {
+ } catch (error) {
     console.error('Error FCM:', error);
     alert('Error: ' + error.message);
- let authMode = 'login';
+  }
+}
+
+let authMode = 'login';
 
 window.togglePassVisibility = function(show) {
   const p = document.getElementById('auth-pass');
@@ -2169,7 +2172,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const app = document.getElementById('app');
       if (app) app.style.display = 'flex';
       
-      openModal('auth');
+openModal('auth');
     }
   });
 });
