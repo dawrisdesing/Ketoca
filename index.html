@@ -2363,20 +2363,30 @@ document.addEventListener('DOMContentLoaded', () => {
       const app = document.getElementById('app');
       if (app) app.style.display = 'flex';
 
-      try {
+try {
         const userDoc = await db.collection('usuarios').doc(user.uid).get();
         if (userDoc.exists) {
           const d = userDoc.data();
           
+          // 1. Descargar grupos y gastos PRIMERO Y ANTES DE NADA
           if (d.ketoca_data) {
             S = d.ketoca_data;
             try { localStorage.setItem('ketoca_v2', JSON.stringify(S)); } catch(e){}
+          } else if (S && S.groups && S.groups.length > 0) {
+             // Si hay datos locales pero no en la nube, los subimos
+             await db.collection('usuarios').doc(user.uid).set({
+               ketoca_data: S,
+               updatedAt: new Date().toISOString()
+             }, { merge: true });
           }
           
+          // 2. Descargar pagos
           if (d.ketoca_payments) {
             Object.keys(d.ketoca_payments).forEach(k => payments[k] = d.ketoca_payments[k]);
             try { localStorage.setItem('ketoca_payments', JSON.stringify(payments)); } catch(e){}
           }
+
+          // 3. Descargar Perfil y Ajustes
           if (d.perfil) {
             if (d.perfil.name) {
               userData.name = d.perfil.name;
@@ -2401,8 +2411,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           }
         } else if (S && S.groups && S.groups.length > 0) {
+           // Si el documento del usuario no existe en Firestore, lo creamos con lo que hay localmente
            await db.collection('usuarios').doc(user.uid).set({
              ketoca_data: S,
+             ketoca_payments: payments,
              perfil: {
                name: userData.name || '',
                email: userData.email || '',
