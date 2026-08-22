@@ -631,21 +631,7 @@ function toggleFab() {
   document.getElementById('fab-overlay').classList.toggle('open', isFabOpen);
 }
 
-function startApp(){
-  document.getElementById('onboard').style.display='none';
-  document.getElementById('app').style.display='flex';
-  
-  const tutDone = localStorage.getItem('ketoca_tut_done');
-  
-  if(!S.groups.length && !tutDone){
-      setTimeout(showTut,400);
-  } else {
-      if(cg===null&&S.groups.length){cg=S.groups[0].id;}
-      _syncUserIdentity();
-      render();
-      setTimeout(moveIndicator, 100);
-  }
-}
+
 
 function moveIndicator() {
   const activeTabEl = document.querySelector('.tab.active');
@@ -1663,26 +1649,35 @@ function pickIcon(ic){
 }
 
 async function pickContactFromPhone(){
-  try {
-    if (!('contacts' in navigator && 'select' in navigator.contacts)) {
-      alert('Tu navegador o dispositivo no soporta la selección directa de contactos. Por favor, escribe el nombre manualmente.');
-      return;
+  // 1. Comprobamos si el navegador soporta el selector de contactos
+  if ('contacts' in navigator && 'select' in navigator.contacts) {
+    try {
+      const props = ['name', 'tel'];
+      const opts = { multiple: false };
+      const contacts = await navigator.contacts.select(props, opts);
+      if (contacts && contacts.length > 0) {
+        const contact = contacts[0];
+        const name = contact.name ? contact.name[0] : '';
+        const phone = contact.tel ? contact.tel[0] : '';
+        
+        const nmField = document.getElementById('m-nm');
+        const phField = document.getElementById('m-ph');
+        if(nmField) nmField.value = name;
+        if(phField) phField.value = phone.replace(/[^0-9+]/g, '');
+      }
+    } catch (ex) {
+      console.log('Selector de contactos cancelado o no permitido', ex);
     }
-    const props = ['name', 'tel'];
-    const opts = { multiple: false };
-    const contacts = await navigator.contacts.select(props, opts);
-    if (contacts && contacts.length > 0) {
-      const contact = contacts[0];
-      const name = contact.name ? contact.name[0] : '';
-      const phone = contact.tel ? contact.tel[0] : '';
-      
-      const nmField = document.getElementById('m-nm');
-      const phField = document.getElementById('m-ph');
-      if(nmField) nmField.value = name;
-      if(phField) phField.value = phone.replace(/[^0-9+]/g, '');
+  } else {
+    // 2. RESPALDO PARA PC / NAVEGADORES SIN SOPORTE
+    // En lugar de un simple alert, enfocamos directamente el campo de texto 
+    // para que el usuario escriba el nombre con total comodidad.
+    const nmField = document.getElementById('m-nm');
+    if (nmField) {
+      nmField.focus();
+      // Opcional: mostrar un aviso sutil
+      alert('La selección directa de agenda solo está disponible en dispositivos móviles compatibles. Por favor, escribe el nombre y teléfono manualmente.');
     }
-  } catch (ex) {
-    console.log('Selector de contactos cancelado o no permitido', ex);
   }
 }
 
