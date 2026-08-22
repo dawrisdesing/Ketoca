@@ -251,7 +251,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 </head>
 <body>
 
-<div class="onboard" id="onboard">
+<div class="onboard" id="onboard" style="display:none">
   <div class="ob-logo">
     <span>KETOCA</span>
     <span style="font-size:36px">🤝</span>
@@ -266,10 +266,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
     <div class="ob-row"><div class="ob-icon">💙</div><div class="ob-text">Paga con Bizum<span>Doble confirmación de pago</span></div></div>
     <div class="ob-row"><div class="ob-icon">🌙</div><div class="ob-text">Modos oscuros<span>Cuida tu vista de noche</span></div></div>
   </div>
-  <button class="ob-start" onclick="startApp()">¡Empezar! 🚀</button>
+  <button class="ob-start" onclick="skipTut()">¡Empezar! 🚀</button>
 </div>
 
-<div class="shell" id="app" style="display:none">
+<div class="shell" id="app" style="display:flex">
   <!-- CABECERA (Perfil a la izquierda, Notificaciones a la derecha) -->
   <div class="hdr" style="justify-content: space-between;">
     <i class="ti ti-menu-2" style="font-size:24px; color:var(--t1); cursor:pointer;" onclick="openModal('user-profile')"></i>
@@ -439,7 +439,7 @@ function nextTut(){if(tutStep<TUT.length-1){tutStep++;renderTut();}else skipTut(
 function skipTut(){
   tutActive = false;
   document.getElementById('tut-root').innerHTML = '';
-  localStorage.setItem('ketoca_tut_done', 'true'); // <--- Guardamos que ya se vio
+  localStorage.setItem('ketoca_tut_done', 'true');
   
   if (!auth.currentUser) {
     openModal('auth');
@@ -630,8 +630,6 @@ function toggleFab() {
   document.getElementById('fab-container').classList.toggle('open', isFabOpen);
   document.getElementById('fab-overlay').classList.toggle('open', isFabOpen);
 }
-
-
 
 function moveIndicator() {
   const activeTabEl = document.querySelector('.tab.active');
@@ -1488,7 +1486,7 @@ function buildModal(){
       <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.18v3.14C3.16 21.32 7.23 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.62H1.18C.43 8.14 0 9.87 0 12s.43 3.86 1.18 5.38l4.09-3.14z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.23 0 3.16 2.68 1.18 6.62l4.09 3.14c.95-2.85 3.6-4.96 6.73-4.96z"/></svg>
       Google
     </button>
-   `);
+    `);
   }
 
   if(currentModal==='pay-method'){
@@ -1525,7 +1523,7 @@ function buildModal(){
           <i class="ti ti-brand-whatsapp" style="font-size:18px;"></i> Avisar por WA
         </button>` 
         : 
-        `<button class="btn btn-p" style="flex:2;" onclick="markSentConNotificacion('${payKey_}','${payMethod_}', settlements()); closeModal(); render();">📨 Marcar pago</button>`
+        `<button class="btn btn-p" style="flex:2;" onclick="markSentConNotificacion('${payKey_}','${payMethod_}')">📨 Marcar pago</button>`
       }
     </div>`);
   }
@@ -1660,7 +1658,6 @@ function pickIcon(ic){
 }
 
 async function pickContactFromPhone(){
-  // 1. Comprobamos si el navegador soporta el selector de contactos
   if ('contacts' in navigator && 'select' in navigator.contacts) {
     try {
       const props = ['name', 'tel'];
@@ -1680,13 +1677,9 @@ async function pickContactFromPhone(){
       console.log('Selector de contactos cancelado o no permitido', ex);
     }
   } else {
-    // 2. RESPALDO PARA PC / NAVEGADORES SIN SOPORTE
-    // En lugar de un simple alert, enfocamos directamente el campo de texto 
-    // para que el usuario escriba el nombre con total comodidad.
     const nmField = document.getElementById('m-nm');
     if (nmField) {
       nmField.focus();
-      // Opcional: mostrar un aviso sutil
       alert('La selección directa de agenda solo está disponible en dispositivos móviles compatibles. Por favor, escribe el nombre y teléfono manualmente.');
     }
   }
@@ -2023,27 +2016,34 @@ function payAndNotifyWA(key, method, phone, amount){
   const parsedAmt = parseFloat(amount).toFixed(2);
   const msg = encodeURIComponent(`¡Hola! Te acabo de enviar €${parsedAmt} por ${mName} desde KETOCA 🤝. Por favor, confírmalo en tu app cuando puedas.`);
 
-  payments[key] = { status: 'sent', method: method, sentAt: now() };
-  savePayments();
-  updateBadges();
-
+  markSentConNotificacion(key, method);
   window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
-  closeModal();
-  render();
 }
 
-function markSent(k, method){
-  payments[k] = { status: 'sent', method, sentAt: now() };
-  savePayments();
-  updateBadges();
-  closeModal();
-  render();
-}
-
-function markSentConNotificacion(key, method){
+async function markSentConNotificacion(key, method){
   payments[key] = { status: 'sent', method: method, sentAt: now() };
   savePayments();
   updateBadges();
+
+  const sets = settlements();
+  const s = sets.find(x => pkey(x) === key);
+  if (s) {
+    const grp = S.groups.find(x => x.id === cg);
+    try {
+      await db.collection('pagos').add({
+        pagadorId: String(s.from),
+        receptorId: String(s.to),
+        nombrePagador: mNm(s.from),
+        nombreGrupo: grp ? grp.name : 'el grupo',
+        importe: s.amount.toFixed(2),
+        metodo: method,
+        grupoId: cg,
+        fecha: new Date().toISOString()
+      });
+    } catch (e) {
+      console.error('No se pudo registrar el pago en Firestore:', e);
+    }
+  }
   closeModal();
   render();
 }
@@ -2076,7 +2076,7 @@ function copyText(txt){
   navigator.clipboard.writeText(txt).then(()=>{
     alert('¡Número copiado al portapapeles!');
   });
-}
+}     
 
 // Navegación lateral con gestos (Swipe)
 let swStartX = 0, swStartY = 0;
@@ -2155,7 +2155,6 @@ window.uploadUserPhoto = uploadUserPhoto;
 window.saveUserData = saveUserData;
 window.openPayModal = openPayModal;
 window.payAndNotifyWA = payAndNotifyWA;
-window.markSent = markSent;
 window.markSentConNotificacion = markSentConNotificacion;
 window.confirmPay = confirmPay;
 window.dispute = dispute;
@@ -2274,6 +2273,7 @@ window.ejecutarAuth = async function() {
     await iniciarSesionEmail(email, pass);
   }
 };
+
 async function iniciarSesionGoogle() {
   try {
     const provider = new firebase.auth.GoogleAuthProvider();
@@ -2311,7 +2311,8 @@ async function iniciarSesionGoogle() {
 window.iniciarSesionGoogle = iniciarSesionGoogle;
 
 window.recuperarPassword = async function() {
-  const email = emailInput ? emailInput.value.trim() : '';
+  const emailField = document.getElementById('auth-email');
+  const email = emailField ? emailField.value.trim() : '';
   if(!email) {
     alert('Introduce tu correo electrónico en la casilla para enviarte el enlace de recuperación.');
     return;
@@ -2407,30 +2408,26 @@ document.addEventListener('DOMContentLoaded', () => {
       const app = document.getElementById('app');
       if (app) app.style.display = 'flex';
 
-try {
+      try {
         const userDoc = await db.collection('usuarios').doc(user.uid).get();
         if (userDoc.exists) {
           const d = userDoc.data();
           
-          // 1. Descargar grupos y gastos PRIMERO Y ANTES DE NADA
           if (d.ketoca_data) {
             S = d.ketoca_data;
             try { localStorage.setItem('ketoca_v2', JSON.stringify(S)); } catch(e){}
           } else if (S && S.groups && S.groups.length > 0) {
-             // Si hay datos locales pero no en la nube, los subimos
              await db.collection('usuarios').doc(user.uid).set({
                ketoca_data: S,
                updatedAt: new Date().toISOString()
              }, { merge: true });
           }
           
-          // 2. Descargar pagos
           if (d.ketoca_payments) {
             Object.keys(d.ketoca_payments).forEach(k => payments[k] = d.ketoca_payments[k]);
             try { localStorage.setItem('ketoca_payments', JSON.stringify(payments)); } catch(e){}
           }
 
-          // 3. Descargar Perfil y Ajustes
           if (d.perfil) {
             if (d.perfil.name) {
               userData.name = d.perfil.name;
@@ -2455,7 +2452,6 @@ try {
             }
           }
         } else if (S && S.groups && S.groups.length > 0) {
-           // Si el documento del usuario no existe en Firestore, lo creamos con lo que hay localmente
            await db.collection('usuarios').doc(user.uid).set({
              ketoca_data: S,
              ketoca_payments: payments,
@@ -2473,7 +2469,6 @@ try {
         console.log('Error sincronizando con Firestore:', err);
       }
 
-      startApp();
       _syncUserIdentity();
       render(true);
     } else {
