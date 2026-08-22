@@ -439,6 +439,8 @@ function nextTut(){if(tutStep<TUT.length-1){tutStep++;renderTut();}else skipTut(
 function skipTut(){
   tutActive = false;
   document.getElementById('tut-root').innerHTML = '';
+  localStorage.setItem('ketoca_tut_done', 'true'); // <--- Guardamos que ya se vio
+  
   if (!auth.currentUser) {
     openModal('auth');
   }
@@ -633,7 +635,9 @@ function startApp(){
   document.getElementById('onboard').style.display='none';
   document.getElementById('app').style.display='flex';
   
-  if(!S.groups.length){
+  const tutDone = localStorage.getItem('ketoca_tut_done');
+  
+  if(!S.groups.length && !tutDone){
       setTimeout(showTut,400);
   } else {
       if(cg===null&&S.groups.length){cg=S.groups[0].id;}
