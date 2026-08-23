@@ -737,8 +737,8 @@ function buildResumen(){
     <div class="row" style="cursor:pointer" onclick="openGastoDetail(${g.id})">
       <div style="font-size:26px;flex-shrink:0">${g.cat||'🔧'}</div>
       <div style="flex:1"><div style="font-size:14px;font-weight:600">${g.desc}</div>
-      <div style="font-size:12px;color:var(--t2)">${formatDate(g.dateRaw || g.date)} · <span style="color:var(--accent)">${mNm(g.payer)}</span> · ÷${g.split.members.length}</div>
-            <div style="font-size:15px;font-weight:700;margin-right:6px">${fmt(g.amount)}</div>
+      <div style="font-size:12px;color:var(--t2)">${formatDate(g.dateRaw || g.date)} · <span style="color:var(--accent)">${mNm(g.payer)}</span> · ÷${g.split.members.length}</div></div>
+      <div style="font-size:15px;font-weight:700;margin-right:6px">${fmt(g.amount)}</div>
       <button class="btn btn-sm" style="padding:6px;border:none;background:transparent" onclick="event.stopPropagation();openGastoDetail(${g.id})">
         <i class="ti ti-info-circle" style="font-size:20px;color:var(--t2)"></i>
       </button>
@@ -759,9 +759,11 @@ function buildGastos(){
     <div class="row" style="cursor:pointer" onclick="openGastoDetail(${g.id})">
       <div style="font-size:26px;flex-shrink:0">${g.cat||'🔧'}</div>
       <div style="flex:1"><div style="font-size:14px;font-weight:600">${g.desc}</div>
-      <div style="font-size:12px;color:var(--t2)">${formatDate(g.dateRaw || g.date)} · <span style="color:var(--accent)">${mNm(g.payer)}</span> · ÷${g.split.members.length}</div>
-      <span onclick="event.stopPropagation(); openGastoDetail(${g.id}, 'comments')" style="color:var(--accent); cursor:pointer; font-weight:600;"> · 💬 Comentar</span>
-            </button>
+      <div style="font-size:12px;color:var(--t2)">${formatDate(g.dateRaw || g.date)} · <span style="color:var(--accent)">${mNm(g.payer)}</span> · ÷${g.split.members.length}</div></div>
+      <div style="font-size:15px;font-weight:700;margin-right:6px">${fmt(g.amount)}</div>
+      <button class="btn btn-sm" style="padding:6px;border:none;background:transparent" onclick="event.stopPropagation();openGastoDetail(${g.id})">
+        <i class="ti ti-info-circle" style="font-size:20px;color:var(--t2)"></i>
+      </button>
     </div>`).join(''):`<div class="empty"><i class="ti ti-receipt" style="font-size:56px;color:#fbbf24;margin-bottom:12px;display:block"></i><p>${t('noGastos')}</p></div>`}</div>`;
 }
 
@@ -1081,13 +1083,11 @@ window.sendExpenseComment = async function(gId) {
         return;
     }
     
-    // Usamos 'cg' directamente, permitiendo que sea 0.
     if (typeof cg === 'undefined' || cg === null) {
         console.error("Error: Grupo (cg) no encontrado.");
         return;
     }
 
-    // Convertimos los IDs a Texto (String) obligatoriamente para que Firebase no colapse
     const groupId = String(cg);
     const gastoId = String(gId);
 
@@ -1104,7 +1104,7 @@ window.sendExpenseComment = async function(gId) {
         await db.collection('grupos').doc(groupId)
                 .collection('gastos').doc(gastoId)
                 .collection('comentarios').add(commentData);
-        input.value = ''; // Limpiamos el input
+        input.value = ''; 
     } catch (e) {
         console.error("Error al enviar comentario en Firestore:", e);
         alert("Error de permisos en Firebase al enviar. Revisa la consola.");
@@ -1120,7 +1120,6 @@ function loadExpenseComments(gId) {
         return;
     }
 
-    // Convertimos a texto para Firebase
     const groupId = String(cg);
     const gastoId = String(gId);
 
