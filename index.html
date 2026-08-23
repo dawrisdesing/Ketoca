@@ -737,7 +737,8 @@ function buildResumen(){
     <div class="row" style="cursor:pointer" onclick="openGastoDetail(${g.id})">
       <div style="font-size:26px;flex-shrink:0">${g.cat||'🔧'}</div>
       <div style="flex:1"><div style="font-size:14px;font-weight:600">${g.desc}</div>
-      <div style="font-size:12px;color:var(--t2)">${formatDate(g.dateRaw || g.date)} · <span style="color:var(--accent)">${mNm(g.payer)}</span> · ÷${g.split.members.length}</div></div>
+      <div style="font-size:12px;color:var(--t2)">${formatDate(g.dateRaw || g.date)} · <span style="color:var(--accent)">${mNm(g.payer)}</span> · ÷${g.split.members.length}</div>
+      <div onclick="event.stopPropagation(); openGastoDetail('${g.id}', 'comments')" style="font-size:11px; color:var(--accent); margin-top:6px; display:inline-flex; align-items:center; gap:4px; font-weight:600; cursor:pointer; background:var(--s2); padding:4px 10px; border-radius:12px;">💬 Añadir comentario</div></div>
       <div style="font-size:15px;font-weight:700;margin-right:6px">${fmt(g.amount)}</div>
       <button class="btn btn-sm" style="padding:6px;border:none;background:transparent" onclick="event.stopPropagation();openGastoDetail(${g.id})">
         <i class="ti ti-info-circle" style="font-size:20px;color:var(--t2)"></i>
@@ -759,7 +760,8 @@ function buildGastos(){
     <div class="row" style="cursor:pointer" onclick="openGastoDetail(${g.id})">
       <div style="font-size:26px;flex-shrink:0">${g.cat||'🔧'}</div>
       <div style="flex:1"><div style="font-size:14px;font-weight:600">${g.desc}</div>
-      <div style="font-size:12px;color:var(--t2)">${formatDate(g.dateRaw || g.date)} · <span style="color:var(--accent)">${mNm(g.payer)}</span> · ÷${g.split.members.length}</div></div>
+      <div style="font-size:12px;color:var(--t2)">${formatDate(g.dateRaw || g.date)} · <span style="color:var(--accent)">${mNm(g.payer)}</span> · ÷${g.split.members.length}</div>
+      <div onclick="event.stopPropagation(); openGastoDetail('${g.id}', 'comments')" style="font-size:11px; color:var(--accent); margin-top:6px; display:inline-flex; align-items:center; gap:4px; font-weight:600; cursor:pointer; background:var(--s2); padding:4px 10px; border-radius:12px;">💬 Añadir comentario</div></div>
       <div style="font-size:15px;font-weight:700;margin-right:6px">${fmt(g.amount)}</div>
       <button class="btn btn-sm" style="padding:6px;border:none;background:transparent" onclick="event.stopPropagation();openGastoDetail(${g.id})">
         <i class="ti ti-info-circle" style="font-size:20px;color:var(--t2)"></i>
@@ -973,6 +975,7 @@ function buildMiembros(){
     :'<div class="empty"><i class="ti ti-trash" style="font-size:44px;color:#fbbf24;margin-bottom:8px;display:block"></i><p>No hay grupos eliminados.</p></div>'}`}
   </div>`;
 }
+
 function buildGastoDetail(){
     const g=gGs().find(x=>x.id===selectedGastoId);
     if(!g)return'';
@@ -1050,12 +1053,15 @@ function buildGastoDetail(){
     `;
 }
 
-function openGastoDetail(id) {
+function openGastoDetail(id, tab = 'info') {
     selectedGastoId = id;
-    gastoDetailTab = 'info';
+    gastoDetailTab = tab;
     openModal('gasto-detail');
+    
+    if (tab === 'comments') {
+        setTimeout(() => loadExpenseComments(id), 50);
+    }
 }
-
 function switchGastoTab(tabName) {
     gastoDetailTab = tabName;
     const mb = document.querySelector('.mb');
@@ -2183,7 +2189,7 @@ function copyText(txt){
   navigator.clipboard.writeText(txt).then(()=>{
     alert('¡Número copiado al portapapeles!');
   });
-}     
+}      
 
 // Navegación lateral con gestos (Swipe)
 let swStartX = 0, swStartY = 0;
