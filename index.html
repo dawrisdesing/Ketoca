@@ -1035,14 +1035,14 @@ function buildGastoDetail(){
       </div>
     `:''}
     ${gastoDetailTab==='comments'?`
-      <div class="card-sm" style="margin-top:10px;">
+      <div class="card-sm" style="margin-top:10px;" onclick="event.stopPropagation()">
         <div style="font-size:14px; font-weight:700; margin-bottom:8px; color:var(--t1);">Comentarios del gasto</div>
         <div id="expense-comments-list" style="max-height:200px; overflow-y:auto; margin-bottom:10px;">
           <p style="font-size:12px; color:var(--t2);">Cargando comentarios...</p>
         </div>
         <div style="display:flex; gap:8px;">
-          <input type="text" id="new-comment-input" placeholder="Escribe un comentario..." style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--border); background:var(--s2); color:var(--t1); font-size:13px;" onkeypress="if(event.key==='Enter') window.sendExpenseComment('${g.id}')" />
-          <button type="button" class="btn btn-sm" onclick="window.sendExpenseComment('${g.id}')" style="background:var(--accent); color:#fff; border-radius:8px; padding:0 12px; cursor:pointer;">Enviar</button>
+          <input type="text" id="new-comment-input" placeholder="Escribe un comentario..." style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--border); background:var(--s2); color:var(--t1); font-size:13px;" onkeypress="if(event.key==='Enter') { event.preventDefault(); window.sendExpenseComment('${g.id}'); }" />
+          <button type="button" class="btn btn-sm" onclick="event.preventDefault(); window.sendExpenseComment('${g.id}')" style="background:var(--accent); color:#fff; border-radius:8px; padding:0 12px; cursor:pointer;">Enviar</button>
         </div>
       </div>
     `:''}
@@ -1061,7 +1061,6 @@ function switchGastoTab(tabName) {
     const mb = document.querySelector('.mb');
     if (mb) {
         mb.innerHTML = '<div class="handle"></div>' + buildGastoDetail();
-        // Carga los comentarios automáticamente al entrar en la pestaña
         if (tabName === 'comments') {
             setTimeout(() => loadExpenseComments(selectedGastoId), 50);
         }
@@ -1070,29 +1069,29 @@ function switchGastoTab(tabName) {
     }
 }
 
-// Función global para enviar comentarios (asegura que el botón la detecte siempre)
+// Helper para detectar tu variable de Grupo automáticamente
+function getActiveGroupId() {
+    if (typeof cg !== 'undefined' && cg) return cg;
+    if (typeof currentGroupId !== 'undefined' && currentGroupId) return currentGroupId;
+    if (typeof currentGroup !== 'undefined' && currentGroup) return currentGroup.id;
+    if (typeof activeGroup !== 'undefined' && activeGroup) return activeGroup;
+    return null;
+}
+
 window.sendExpenseComment = async function(gId) {
-    console.log("Intentando enviar comentario al gasto:", gId);
-    
     const input = document.getElementById('new-comment-input');
-    if (!input) {
-        console.error("No se encuentra el campo de texto de comentarios.");
-        return;
-    }
-    
+    if (!input || !input.value.trim()) return;
     const text = input.value.trim();
-    if (!text) {
-        console.log("Comentario vacío. No se envía.");
-        return;
-    }
 
     if (!auth || !auth.currentUser) {
         alert("Debes iniciar sesión para comentar.");
         return;
     }
     
-    if (!cg) {
-        console.error("No hay un grupo activo (cg) seleccionado.");
+    const groupId = getActiveGroupId();
+    if (!groupId) {
+        alert("Error: No encuentro el ID del grupo en el sistema. Abre la consola (F12) para investigar.");
+        console.error("Variable de grupo no encontrada. Necesitamos saber cómo se llama tu variable del grupo.");
         return;
     }
 
@@ -1106,39 +1105,39 @@ window.sendExpenseComment = async function(gId) {
     };
 
     try {
-        await db.collection('grupos').doc(cg)
+        await db.collection('grupos').doc(groupId)
                 .collection('gastos').doc(gId)
                 .collection('comentarios').add(commentData);
-        
-        console.log("Comentario guardado con éxito.");
-        input.value = ''; // Limpiamos el texto al instante
+        input.value = ''; 
     } catch (e) {
         console.error("Error al enviar comentario:", e);
-        alert("Error al enviar. Mira la consola (F12) para más detalles.");
+        alert("Error de permisos en Firestore. Revisa la consola.");
     }
 }
 
 function loadExpenseComments(gId) {
     const container = document.getElementById('expense-comments-list');
     if (!container) return;
-    if (!cg) return;
 
-    // Conectamos con Firestore para traer los mensajes en tiempo real
-    db.collection('grupos').doc(cg)
+    const groupId = getActiveGroupId();
+    if (!groupId) {
+        container.innerHTML = '<p style="font-size:12px; color:#ff4444;">Error: Variable de grupo no detectada.</p>';
+        return;
+    }
+
+    db.collection('grupos').doc(groupId)
       .collection('gastos').doc(gId)
       .collection('comentarios')
       .orderBy('createdAt', 'asc')
       .onSnapshot(snapshot => {
           if (snapshot.empty) {
-              container.innerHTML = '<p style="font-size:12px; color:var(--t2);">No hay comentarios aún. ¡Rompe el hielo y escribe algo!</p>';
+              container.innerHTML = '<p style="font-size:12px; color:var(--t2);">No hay comentarios aún. ¡Escribe el primero!</p>';
               return;
           }
-
           let html = '';
           snapshot.forEach(doc => {
               const c = doc.data();
               const time = c.createdAt ? new Date(c.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
-              
               html += `
                 <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:8px; background:var(--s2); padding:8px; border-radius:8px;">
                     <img src="${c.photoURL}" style="width:28px; height:28px; border-radius:50%; object-fit:cover;" />
@@ -1153,7 +1152,7 @@ function loadExpenseComments(gId) {
               `;
           });
           container.innerHTML = html;
-          container.scrollTop = container.scrollHeight; // Auto-scroll hacia abajo
+          container.scrollTop = container.scrollHeight; 
       }, err => {
           console.error("Error cargando comentarios:", err);
           container.innerHTML = '<p style="font-size:12px; color:var(--t2);">Error al cargar los comentarios.</p>';
