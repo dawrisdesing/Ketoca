@@ -2057,9 +2057,12 @@ function confirmPay(k){
   updateBadges();
   render();
 }
-
 function dispute(k){
-  delete payments[k];
+  if (payments[k]) {
+    payments[k].status = 'pending';
+  } else {
+    payments[k] = { status: 'pending' };
+  }
   savePayments();
   updateBadges();
   render();
