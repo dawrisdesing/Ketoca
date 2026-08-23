@@ -1069,15 +1069,6 @@ function switchGastoTab(tabName) {
     }
 }
 
-// Helper para detectar tu variable de Grupo automáticamente
-function getActiveGroupId() {
-    if (typeof cg !== 'undefined' && cg) return cg;
-    if (typeof currentGroupId !== 'undefined' && currentGroupId) return currentGroupId;
-    if (typeof currentGroup !== 'undefined' && currentGroup) return currentGroup.id;
-    if (typeof activeGroup !== 'undefined' && activeGroup) return activeGroup;
-    return null;
-}
-
 window.sendExpenseComment = async function(gId) {
     const input = document.getElementById('new-comment-input');
     if (!input || !input.value.trim()) return;
@@ -1088,12 +1079,15 @@ window.sendExpenseComment = async function(gId) {
         return;
     }
     
-    const groupId = getActiveGroupId();
-    if (!groupId) {
-        alert("Error: No encuentro el ID del grupo en el sistema. Abre la consola (F12) para investigar.");
-        console.error("Variable de grupo no encontrada. Necesitamos saber cómo se llama tu variable del grupo.");
+    // Usamos 'cg' directamente, permitiendo que sea 0.
+    if (typeof cg === 'undefined' || cg === null) {
+        console.error("Error: Grupo (cg) no encontrado.");
         return;
     }
+
+    // Convertimos los IDs a Texto (String) obligatoriamente para que Firebase no colapse
+    const groupId = String(cg);
+    const gastoId = String(gId);
 
     const user = auth.currentUser;
     const commentData = {
@@ -1106,12 +1100,12 @@ window.sendExpenseComment = async function(gId) {
 
     try {
         await db.collection('grupos').doc(groupId)
-                .collection('gastos').doc(gId)
+                .collection('gastos').doc(gastoId)
                 .collection('comentarios').add(commentData);
-        input.value = ''; 
+        input.value = ''; // Limpiamos el input
     } catch (e) {
-        console.error("Error al enviar comentario:", e);
-        alert("Error de permisos en Firestore. Revisa la consola.");
+        console.error("Error al enviar comentario en Firestore:", e);
+        alert("Error de permisos en Firebase al enviar. Revisa la consola.");
     }
 }
 
@@ -1119,14 +1113,17 @@ function loadExpenseComments(gId) {
     const container = document.getElementById('expense-comments-list');
     if (!container) return;
 
-    const groupId = getActiveGroupId();
-    if (!groupId) {
-        container.innerHTML = '<p style="font-size:12px; color:#ff4444;">Error: Variable de grupo no detectada.</p>';
+    if (typeof cg === 'undefined' || cg === null) {
+        container.innerHTML = '<p style="font-size:12px; color:#ff4444;">Error: Grupo no detectado.</p>';
         return;
     }
 
+    // Convertimos a texto para Firebase
+    const groupId = String(cg);
+    const gastoId = String(gId);
+
     db.collection('grupos').doc(groupId)
-      .collection('gastos').doc(gId)
+      .collection('gastos').doc(gastoId)
       .collection('comentarios')
       .orderBy('createdAt', 'asc')
       .onSnapshot(snapshot => {
