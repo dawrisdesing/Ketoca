@@ -973,73 +973,115 @@ function buildMiembros(){
     :'<div class="empty"><i class="ti ti-trash" style="font-size:44px;color:#fbbf24;margin-bottom:8px;display:block"></i><p>No hay grupos eliminados.</p></div>'}`}
   </div>`;
 }
-
 function buildGastoDetail(){
-  const g=gGs().find(x=>x.id===selectedGastoId);
-  if(!g)return'';
-  const gs=gGs();
-  const idx=gs.findIndex(x=>x.id===selectedGastoId);
-  const prev=gs[idx-1],next=gs[idx+1];
-  const pp=fmt(g.amount/(g.split.members.length||1));
-  return`
-  <div class="mh">
-    <div class="mt2">${g.cat||'🔧'} ${g.desc}</div>
-    <button class="btn btn-sm" onclick="closeModal()"><i class="ti ti-x"></i></button>
-  </div>
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-    <button class="btn btn-sm" onclick="${prev?'navegarGasto('+ (idx-1) +')':'void(0)'}" style="${prev?'':'opacity:.3;cursor:not-allowed'}">← Anterior</button>
-    <span style="font-size:12px;color:var(--t2)">${idx+1} de ${gs.length}</span>
-    <button class="btn btn-sm" onclick="${next?'navegarGasto('+ (idx+1) +')':'void(0)'}" style="${next?'':'opacity:.3;cursor:not-allowed'}">Siguiente →</button>
-  </div>
-  <div class="dtab-bar">
-    <div class="dtab ${gastoDetailTab==='info'?'active':''}" onclick="switchGastoTab('info')">📋 Detalle</div>
-    <div class="dtab ${gastoDetailTab==='split'?'active':''}" onclick="switchGastoTab('split')">➗ Reparto</div>
-    <div class="dtab ${gastoDetailTab==='foto'?'active':''}" onclick="switchGastoTab('foto')">📷 Foto</div>
-  </div>
-  ${gastoDetailTab==='info'?`
-    <div class="card-sm">
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-        <span style="color:var(--t2);font-size:13px">💰 ${t('amount')}</span>
-        <span style="font-size:18px;font-weight:800;color:var(--accent)">${fmt(g.amount)}</span>
+    const g=gGs().find(x=>x.id===selectedGastoId);
+    if(!g)return'';
+    const gs=gGs();
+    const idx=gs.findIndex(x=>x.id===selectedGastoId);
+    const prev=gs[idx-1],next=gs[idx+1];
+    const pp=fmt(g.amount/(g.split.members.length||1));
+    return`
+    <div class="mh">
+      <div class="mt2">${g.cat||'/'} ${g.desc}</div>
+      <button class="btn btn-sm" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <button class="btn btn-sm" onclick="${prev?'navegarGasto('+ (idx-1) +')':'void(0)'}" style="${prev?'':'opacity:.3;cursor:not-allowed'}">← Anterior</button>
+      <span style="font-size:12px;color:var(--t2)">${idx+1} de ${gs.length}</span>
+      <button class="btn btn-sm" onclick="${next?'navegarGasto('+ (idx+1) +')':'void(0)'}" style="${next?'':'opacity:.3;cursor:not-allowed'}">Siguiente →</button>
+    </div>
+    <div class="dtab-bar">
+      <div class="dtab ${gastoDetailTab==='info'?'active':''}" onclick="switchGastoTab('info')">Detalle</div>
+      <div class="dtab ${gastoDetailTab==='split'?'active':''}" onclick="switchGastoTab('split')">÷ Reparto</div>
+      <div class="dtab ${gastoDetailTab==='foto'?'active':''}" onclick="switchGastoTab('foto')">📷 Foto</div>
+      <div class="dtab ${gastoDetailTab==='comments'?'active':''}" onclick="switchGastoTab('comments')">💬 Comentarios</div>
+    </div>
+    ${gastoDetailTab==='info'?`
+      <div class="card-sm">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+          <span style="color:var(--t2);font-size:13px">💰 Monto</span>
+          <span style="font-size:18px;font-weight:800;color:var(--accent)">${fmt(g.amount)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+          <span style="color:var(--t2);font-size:13px">👤 Pagado por</span>
+          <span style="font-size:14px;font-weight:600">${mNm(g.payer)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+          <span style="color:var(--t2);font-size:13px">📅 Fecha</span>
+          <span style="font-size:14px">${formatDate(g.dateRaw || g.date)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:var(--t2);font-size:13px">📁 Categoría</span>
+          <span style="font-size:14px">${g.cat||'/'}</span>
+        </div>
       </div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-        <span style="color:var(--t2);font-size:13px">👤 ${t('paidBy')}</span>
-        <span style="font-size:14px;font-weight:600">${mNm(g.payer)}</span>
+    `:''}
+    ${gastoDetailTab==='split'?`
+      <div class="card">
+        <div style="font-size:13px;color:var(--t2);margin-bottom:10px">Dividido entre ${g.split.members.length} personas · ${pp} cada uno</div>
+        ${g.split.members.map(id=>`<div class="row">${avH(id)}<div style="flex:1;font-size:14px;font-weight:600">${mNm(id)}</div><div style="font-size:14px;font-weight:700;color:var(--accent)">${pp}</div></div>`).join('')}
       </div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-        <span style="color:var(--t2);font-size:13px">📅 ${t('date')}</span>
-        <span style="font-size:14px">${formatDate(g.dateRaw || g.date)}</span>
+    `:''}
+    ${gastoDetailTab==='foto'?`
+      <div style="text-align:center">
+        ${g.photo?`<img src="${g.photo}" class="photo-preview" alt="Foto del gasto">
+        <button class="btn btn-sm btn-d btn-w" onclick="removePhoto(${g.id})">🗑️ Eliminar foto</button>`
+        :`<div class="photo-box" onclick="triggerPhoto(${g.id})">
+          <div style="font-size:48px;margin-bottom:8px">📷</div>
+          <div style="font-size:14px;font-weight:600;color:var(--t2)">Añadir foto del ticket</div>
+          <div style="font-size:12px;color:var(--t3);margin-top:4px">Toca para seleccionar una imagen</div>
+        </div>`}
+        <input type="file" id="photo-input-${g.id}" accept="image/*" style="display:none" onchange="handlePhoto(${g.id},this)">
       </div>
-      <div style="display:flex;justify-content:space-between">
-        <span style="color:var(--t2);font-size:13px">🏷️ ${t('cat')}</span>
-        <span style="font-size:14px">${g.cat||'🔧'}</span>
+    `:''}
+    ${gastoDetailTab==='comments'?`
+      <div class="card-sm" style="margin-top:10px;">
+        <div style="font-size:14px; font-weight:700; margin-bottom:8px; color:var(--t1);">Comentarios del gasto</div>
+        <div id="expense-comments-list" style="max-height:200px; overflow-y:auto; margin-bottom:10px;">
+          <p style="font-size:12px; color:var(--t2);">Cargando comentarios...</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="new-comment-input" placeholder="Escribe un comentario..." style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--border); background:var(--s2); color:var(--t1); font-size:13px;" />
+          <button class="btn btn-sm" onclick="sendExpenseComment('${g.id}')" style="background:var(--accent); color:#fff; border-radius:8px; padding:0 12px;">Enviar</button>
+        </div>
       </div>
-    </div>`
-  :gastoDetailTab==='split'?`
-    <div class="card">
-      <div style="font-size:13px;color:var(--t2);margin-bottom:10px">Dividido entre ${g.split.members.length} personas · ${pp} cada uno</div>
-      ${g.split.members.map(id=>`<div class="row">${avH(id)}
-        <div style="flex:1;font-size:14px;font-weight:600">${mNm(id)}</div>
-        <div style="font-size:14px;font-weight:700;color:var(--accent)">${pp}</div>
-      </div>`).join('')}
-    </div>`
-  :`<div style="text-align:center">
-    ${g.photo?`<img src="${g.photo}" class="photo-preview" alt="Foto del gasto">
-      <button class="btn btn-sm btn-d btn-w" onclick="removePhoto(${g.id})">🗑️ Eliminar foto</button>`
-    :`<div class="photo-box" onclick="triggerPhoto(${g.id})">
-      <div style="font-size:48px;margin-bottom:8px">📷</div>
-      <div style="font-size:14px;font-weight:600;color:var(--t2)">Añadir foto del ticket</div>
-      <div style="font-size:12px;color:var(--t3);margin-top:4px">Toca para seleccionar una imagen</div>
-    </div>`}
-    <input type="file" id="photo-input-${g.id}" accept="image/*" style="display:none" onchange="handlePhoto(${g.id},this)">
-  </div>`}
-  <button class="btn btn-d btn-w" style="margin-top:14px" onclick="delGasto(${g.id});closeModal()">🗑️ Eliminar este gasto</button>`;
+    `:''}
+    <button class="btn btn-d btn-w" style="margin-top:14px" onclick="delGasto(${g.id});closeModal()">🗑️ Eliminar este gasto</button>
+    `;
 }
 
 function openGastoDetail(id) {
-  selectedGastoId = id;
-  gastoDetailTab = 'info';
-  openModal('gasto-detail');
+    selectedGastoId = id;
+    gastoDetailTab = 'info';
+    openModal('gasto-detail');
+}
+
+async function sendExpenseComment(gId) {
+    const input = document.getElementById('new-comment-input');
+    if (!input || !input.value.trim()) return;
+    const text = input.value.trim();
+
+    if (!auth || !auth.currentUser) return;
+    const user = auth.currentUser;
+
+    const commentData = {
+        uid: user.uid,
+        name: user.displayName || 'Usuario',
+        photoURL: user.photoURL || 'https://via.placeholder.com/40',
+        text: text,
+        createdAt: new Date().toISOString()
+    };
+
+    try {
+        await db.collection('grupos').doc(cg)
+                .collection('gastos').doc(gId)
+                .collection('comentarios').add(commentData);
+        
+        input.value = '';
+        openGastoDetail(gId);
+    } catch (e) {
+        console.error("Error al enviar comentario:", e);
+    }
 }
 
 function switchGastoTab(tabName) {
