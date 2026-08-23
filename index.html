@@ -994,7 +994,7 @@ function buildGastoDetail(){
       <div class="dtab ${gastoDetailTab==='info'?'active':''}" onclick="switchGastoTab('info')">Detalle</div>
       <div class="dtab ${gastoDetailTab==='split'?'active':''}" onclick="switchGastoTab('split')">÷ Reparto</div>
       <div class="dtab ${gastoDetailTab==='foto'?'active':''}" onclick="switchGastoTab('foto')">📷 Foto</div>
-      <div class="dtab ${gastoDetailTab==='comments'?'active':''}" onclick="switchGastoTab('comments')">💬 Comentarios</div>
+      <div class="dtab ${gastoDetailTab==='comments'?'active':''}" onclick="switchGastoTab('comments')">💬 ¡Comenta aquí!</div>
     </div>
     ${gastoDetailTab==='info'?`
       <div class="card-sm">
@@ -1041,8 +1041,8 @@ function buildGastoDetail(){
           <p style="font-size:12px; color:var(--t2);">Cargando comentarios...</p>
         </div>
         <div style="display:flex; gap:8px;">
-          <input type="text" id="new-comment-input" placeholder="Escribe un comentario..." style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--border); background:var(--s2); color:var(--t1); font-size:13px;" />
-          <button class="btn btn-sm" onclick="sendExpenseComment('${g.id}')" style="background:var(--accent); color:#fff; border-radius:8px; padding:0 12px;">Enviar</button>
+          <input type="text" id="new-comment-input" placeholder="Escribe un comentario..." style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--border); background:var(--s2); color:var(--t1); font-size:13px;" onkeypress="if(event.key==='Enter') window.sendExpenseComment('${g.id}')" />
+          <button type="button" class="btn btn-sm" onclick="window.sendExpenseComment('${g.id}')" style="background:var(--accent); color:#fff; border-radius:8px; padding:0 12px; cursor:pointer;">Enviar</button>
         </div>
       </div>
     `:''}
@@ -1061,7 +1061,7 @@ function switchGastoTab(tabName) {
     const mb = document.querySelector('.mb');
     if (mb) {
         mb.innerHTML = '<div class="handle"></div>' + buildGastoDetail();
-        // Cargamos los comentarios al instante cuando el usuario cambie a esta pestaña
+        // Carga los comentarios automáticamente al entrar en la pestaña
         if (tabName === 'comments') {
             setTimeout(() => loadExpenseComments(selectedGastoId), 50);
         }
@@ -1070,10 +1070,21 @@ function switchGastoTab(tabName) {
     }
 }
 
-async function sendExpenseComment(gId) {
+// Función global para enviar comentarios (asegura que el botón la detecte siempre)
+window.sendExpenseComment = async function(gId) {
+    console.log("Intentando enviar comentario al gasto:", gId);
+    
     const input = document.getElementById('new-comment-input');
-    if (!input || !input.value.trim()) return;
+    if (!input) {
+        console.error("No se encuentra el campo de texto de comentarios.");
+        return;
+    }
+    
     const text = input.value.trim();
+    if (!text) {
+        console.log("Comentario vacío. No se envía.");
+        return;
+    }
 
     if (!auth || !auth.currentUser) {
         alert("Debes iniciar sesión para comentar.");
@@ -1081,12 +1092,11 @@ async function sendExpenseComment(gId) {
     }
     
     if (!cg) {
-        console.error("Error: No hay un grupo activo seleccionado.");
+        console.error("No hay un grupo activo (cg) seleccionado.");
         return;
     }
 
     const user = auth.currentUser;
-
     const commentData = {
         uid: user.uid,
         name: user.displayName || 'Usuario',
@@ -1100,17 +1110,17 @@ async function sendExpenseComment(gId) {
                 .collection('gastos').doc(gId)
                 .collection('comentarios').add(commentData);
         
+        console.log("Comentario guardado con éxito.");
         input.value = ''; // Limpiamos el texto al instante
     } catch (e) {
-        console.error("Error detallado al enviar comentario:", e);
-        alert("No se pudo enviar el comentario. Revisa la consola.");
+        console.error("Error al enviar comentario:", e);
+        alert("Error al enviar. Mira la consola (F12) para más detalles.");
     }
 }
 
 function loadExpenseComments(gId) {
     const container = document.getElementById('expense-comments-list');
     if (!container) return;
-
     if (!cg) return;
 
     // Conectamos con Firestore para traer los mensajes en tiempo real
@@ -1120,7 +1130,7 @@ function loadExpenseComments(gId) {
       .orderBy('createdAt', 'asc')
       .onSnapshot(snapshot => {
           if (snapshot.empty) {
-              container.innerHTML = '<p style="font-size:12px; color:var(--t2);">No hay comentarios aún. ¡Escribe el primero!</p>';
+              container.innerHTML = '<p style="font-size:12px; color:var(--t2);">No hay comentarios aún. ¡Rompe el hielo y escribe algo!</p>';
               return;
           }
 
@@ -1143,55 +1153,11 @@ function loadExpenseComments(gId) {
               `;
           });
           container.innerHTML = html;
-          container.scrollTop = container.scrollHeight; // Hace scroll abajo del todo para ver el nuevo mensaje
+          container.scrollTop = container.scrollHeight; // Auto-scroll hacia abajo
       }, err => {
           console.error("Error cargando comentarios:", err);
           container.innerHTML = '<p style="font-size:12px; color:var(--t2);">Error al cargar los comentarios.</p>';
       });
-}
-
-function openGastoDetail(id) {
-    selectedGastoId = id;
-    gastoDetailTab = 'info';
-    openModal('gasto-detail');
-}
-
-async function sendExpenseComment(gId) {
-    const input = document.getElementById('new-comment-input');
-    if (!input || !input.value.trim()) return;
-    const text = input.value.trim();
-
-    if (!auth || !auth.currentUser) return;
-    const user = auth.currentUser;
-
-    const commentData = {
-        uid: user.uid,
-        name: user.displayName || 'Usuario',
-        photoURL: user.photoURL || 'https://via.placeholder.com/40',
-        text: text,
-        createdAt: new Date().toISOString()
-    };
-
-    try {
-        await db.collection('grupos').doc(cg)
-                .collection('gastos').doc(gId)
-                .collection('comentarios').add(commentData);
-        
-        input.value = '';
-        openGastoDetail(gId);
-    } catch (e) {
-        console.error("Error al enviar comentario:", e);
-    }
-}
-
-function switchGastoTab(tabName) {
-  gastoDetailTab = tabName;
-  const mb = document.querySelector('.mb');
-  if (mb) {
-    mb.innerHTML = '<div class="handle"></div>' + buildGastoDetail();
-  } else {
-    renderModal();
-  }
 }
 
 function navegarGasto(index) {
