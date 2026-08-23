@@ -738,7 +738,7 @@ function buildResumen(){
       <div style="font-size:26px;flex-shrink:0">${g.cat||'🔧'}</div>
       <div style="flex:1"><div style="font-size:14px;font-weight:600">${g.desc}</div>
       <div style="font-size:12px;color:var(--t2)">${formatDate(g.dateRaw || g.date)} · <span style="color:var(--accent)">${mNm(g.payer)}</span> · ÷${g.split.members.length}</div>
-      <div onclick="event.stopPropagation(); openGastoDetail(${g.id}, 'comments')" class="chip" style="margin-top:8px; background:var(--accent-bg); border:.5px solid var(--accent-bd); color:var(--accent);">💬 Añadir comentario</div>
+      <div onclick="event.stopPropagation(); openGastoDetail(${g.id}, 'comments')" style="margin-top:6px; background:var(--accent-bg); border:.5px solid var(--accent-bd); color:var(--accent); font-size:10px; padding:3px 8px; border-radius:10px; display:inline-block; font-weight:700; white-space:nowrap;">💬 Comentar</div>
       <div style="font-size:15px;font-weight:700;margin-right:6px">${fmt(g.amount)}</div>
       <button class="btn btn-sm" style="padding:6px;border:none;background:transparent" onclick="event.stopPropagation();openGastoDetail(${g.id})">
         <i class="ti ti-info-circle" style="font-size:20px;color:var(--t2)"></i>
@@ -761,7 +761,7 @@ function buildGastos(){
       <div style="font-size:26px;flex-shrink:0">${g.cat||'🔧'}</div>
       <div style="flex:1"><div style="font-size:14px;font-weight:600">${g.desc}</div>
       <div style="font-size:12px;color:var(--t2)">${formatDate(g.dateRaw || g.date)} · <span style="color:var(--accent)">${mNm(g.payer)}</span> · ÷${g.split.members.length}</div>
-      <div onclick="event.stopPropagation(); openGastoDetail(${g.id}, 'comments')" class="chip" style="margin-top:8px; background:var(--accent-bg); border:.5px solid var(--accent-bd); color:var(--accent);">💬 Añadir comentario</div>
+      <div onclick="event.stopPropagation(); openGastoDetail(${g.id}, 'comments')" style="margin-top:6px; background:var(--accent-bg); border:.5px solid var(--accent-bd); color:var(--accent); font-size:10px; padding:3px 8px; border-radius:10px; display:inline-block; font-weight:700; white-space:nowrap;">💬 Comentar</div>
       <div style="font-size:15px;font-weight:700;margin-right:6px">${fmt(g.amount)}</div>
       <button class="btn btn-sm" style="padding:6px;border:none;background:transparent" onclick="event.stopPropagation();openGastoDetail(${g.id})">
         <i class="ti ti-info-circle" style="font-size:20px;color:var(--t2)"></i>
