@@ -756,12 +756,12 @@ function buildGastos(){
   const gs=[...gGs()].reverse();
   return`<div class="sec">${t('allGastos')}</div>
   <div class="card">${gs.length?gs.map(g=>`
-    <div class="row" style="cursor:pointer" onclick="openGastoDetail(${g.id})">
+    <div class="row" style="cursor:pointer" onclick="openGastoDetail('${g.id}')">
       <div style="font-size:26px;flex-shrink:0">${g.cat||'🔧'}</div>
       <div style="flex:1"><div style="font-size:14px;font-weight:600">${g.desc}</div>
       <div style="font-size:12px;color:var(--t2)">${formatDate(g.dateRaw || g.date)} · <span style="color:var(--accent)">${mNm(g.payer)}</span> · ÷${g.split.members.length}</div></div>
       <div style="font-size:15px;font-weight:700;margin-right:6px">${fmt(g.amount)}</div>
-      <button class="btn btn-sm" style="padding:6px;border:none;background:transparent" onclick="event.stopPropagation();openGastoDetail(${g.id})">
+      <button class="btn btn-sm" style="padding:6px;border:none;background:transparent" onclick="event.stopPropagation();openGastoDetail('${g.id}')">
         <i class="ti ti-info-circle" style="font-size:20px;color:var(--t2)"></i>
       </button>
     </div>`).join(''):`<div class="empty"><i class="ti ti-receipt" style="font-size:56px;color:#fbbf24;margin-bottom:12px;display:block"></i><p>${t('noGastos')}</p></div>`}</div>`;
@@ -1052,12 +1052,12 @@ function buildGastoDetail(){
 }
 
 function openGastoDetail(id, tab = 'info') {
-    selectedGastoId = id;
+    selectedGastoId = String(id); // Forzamos que sea texto para que coincida con el nuevo ID de timestamp
     gastoDetailTab = tab;
     openModal('gasto-detail');
-    
+
     if (tab === 'comments') {
-        setTimeout(() => loadExpenseComments(id), 50);
+        setTimeout(() => loadExpenseComments(selectedGastoId), 50);
     }
 }
 function switchGastoTab(tabName) {
