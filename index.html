@@ -1072,7 +1072,6 @@ function switchGastoTab(tabName) {
         renderModal();
     }
 }
-
 window.sendExpenseComment = async function(gId) {
     const input = document.getElementById('new-comment-input');
     if (!input || !input.value.trim()) return;
@@ -1083,19 +1082,19 @@ window.sendExpenseComment = async function(gId) {
         return;
     }
     
-    if (typeof cg === 'undefined' || cg === null) {
-        console.error("Error: Grupo (cg) no encontrado.");
+    if (typeof cg === 'undefined' || cg === null || !gId) {
+        console.error("Error: Grupo o ID de gasto no encontrado.");
         return;
     }
 
     const groupId = String(cg);
-    const gastoId = String(gId);
+    const gastoId = String(gId); // Forzamos que use estrictamente el ID del gasto al que le diste click
 
     const user = auth.currentUser;
     const commentData = {
         uid: user.uid,
-        name: user.displayName || 'Usuario',
-        photoURL: user.photoURL || 'https://via.placeholder.com/40',
+        name: user.displayName || userData.name || 'Usuario',
+        photoURL: user.photoURL || userData.photo || 'https://via.placeholder.com/40',
         text: text,
         createdAt: new Date().toISOString()
     };
