@@ -2098,22 +2098,22 @@ function updPrev(){
 }
 
 function addGasto(){
-  const desc=document.getElementById('g-desc')?.value.trim();
-  const am=parseFloat(document.getElementById('g-am')?.value)||0;
-  const payer=+document.getElementById('g-pay')?.value;
-  const dateRaw=document.getElementById('g-date-inp')?.value||getISO();
-  const selChips=[...document.querySelectorAll('#g-chips .chip.sel')].map(c=>+c.dataset.id);
+    const desc=document.getElementById('g-desc')?.value.trim();
+    const am=parseFloat(document.getElementById('g-am')?.value)||0;
+    const payer=+document.getElementById('g-pay')?.value;
+    const dateRaw=document.getElementById('g-date-inp')?.value||getISO();
+    const selChips=[...document.querySelectorAll('#g-chips .chip.sel')].map(c=>+c.dataset.id);
 
-  if(!desc||am<=0||!selChips.length)return;
+    if(!desc||am<=0||!selChips.length)return;
 
-  const id=S.gastos[cg]?.length?Math.max(...S.gastos[cg].map(g=>g.id))+1:1;
-  const newGasto={id,desc,amount:am,payer,dateRaw,cat:selectedIcon,split:{type:splitType,members:selChips}};
-  if(gastoPhoto)newGasto.photo=gastoPhoto;
+    const id = 'g_' + Date.now();
+    const newGasto={id,desc,amount:am,payer,dateRaw,cat:selectedIcon,split:{type:splitType,members:selChips}};
+    if(gastoPhoto)newGasto.photo=gastoPhoto;
 
-  if(!S.gastos[cg])S.gastos[cg]=[];
-  S.gastos[cg].push(newGasto);
-  
-  closeModal();
+    if(!S.gastos[cg])S.gastos[cg]=[];
+    S.gastos[cg].push(newGasto);
+
+    closeModal();
 }
 
 function delGasto(id){
