@@ -1042,9 +1042,9 @@ function buildGastoDetail(){
           <p style="font-size:12px; color:var(--t2);">Cargando comentarios...</p>
         </div>
         <div style="display:flex; gap:8px;">
-          <input type="text" id="new-comment-input" placeholder="Escribe un comentario..." style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--border); background:var(--s2); color:var(--t1); font-size:13px;" onkeypress="if(event.key==='Enter') { event.preventDefault(); window.sendExpenseComment('${g.id}'); }" />
           <input type="text" id="new-comment-input" placeholder="Escribe un comentario..." style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--border); background:var(--s2); color:var(--t1); font-size:13px;" onkeypress="if(event.key==='Enter') { event.preventDefault(); window.sendExpenseComment(selectedGastoId); }" />
           <button type="button" class="btn btn-sm" onclick="event.preventDefault(); window.sendExpenseComment(selectedGastoId)" style="background:var(--accent); color:#fff; border-radius:8px; padding:0 12px; cursor:pointer;">Enviar</button>
+        </div>
       </div>
     `:''}
     <button class="btn btn-d btn-w" style="margin-top:14px" onclick="delGasto(${g.id});closeModal()">🗑️ Eliminar este gasto</button>
