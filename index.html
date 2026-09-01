@@ -1115,11 +1115,15 @@ function loadExpenseComments(gId) {
     const container = document.getElementById('expense-comments-list');
     if (!container) return;
 
-    if (typeof cg === 'undefined' || cg === null) {
-        container.innerHTML = '<p style="font-size:12px; color:#ff4444;">Error: Grupo no detectado.</p>';
+    // Vaciamos el contenedor inmediatamente al abrir para evitar mostrar comentarios viejos del gasto anterior
+    container.innerHTML = '<p style="font-size:12px; color:var(--t2);">Cargando comentarios...</p>';
+
+    if (typeof cg === 'undefined' || cg === null || !gId) {
+        container.innerHTML = '<p style="font-size:12px; color:#ff4444;">Error: Grupo o gasto no detectado.</p>';
         return;
     }
 
+    // Convertimos a texto para asegurar la ruta exacta y aislada en Firestore
     const groupId = String(cg);
     const gastoId = String(gId);
 
@@ -1128,6 +1132,9 @@ function loadExpenseComments(gId) {
       .collection('comentarios')
       .orderBy('createdAt', 'asc')
       .onSnapshot(snapshot => {
+          // Validamos de nuevo que seguimos visualizando el mismo gasto para evitar cruces visuales
+          if (String(selectedGastoId) !== gastoId) return;
+
           if (snapshot.empty) {
               container.innerHTML = '<p style="font-size:12px; color:var(--t2);">No hay comentarios aún. ¡Escribe el primero!</p>';
               return;
@@ -1138,10 +1145,10 @@ function loadExpenseComments(gId) {
               const time = c.createdAt ? new Date(c.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
               html += `
                 <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:8px; background:var(--s2); padding:8px; border-radius:8px;">
-                    <img src="${c.photoURL}" style="width:28px; height:28px; border-radius:50%; object-fit:cover;" />
+                    <img src="${c.photoURL || 'https://via.placeholder.com/40'}" style="width:28px; height:28px; border-radius:50%; object-fit:cover;" />
                     <div style="flex:1;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:12px; font-weight:700; color:var(--t1);">${c.name}</span>
+                            <span style="font-size:12px; font-weight:700; color:var(--t1);">${c.name || 'Usuario'}</span>
                             <span style="font-size:10px; color:var(--t2);">${time}</span>
                         </div>
                         <p style="font-size:12px; color:var(--t1); margin-top:2px; word-break:break-word;">${c.text}</p>
