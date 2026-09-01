@@ -2308,18 +2308,17 @@ async function activarNotificacionesPush() {
     });
 
     if (token) {
-      if (typeof ME !== 'undefined' && ME !== null) {
-        await db.collection('tokens').doc(String(ME)).set({
-          token: token,
-          nombre: typeof mNm === 'function' ? mNm(ME) : 'Usuario',
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
+      // Guardamos el token asociado directamente al usuario actual logueado (Auth) o de forma global en el navegador
+      const userId = (auth && auth.currentUser) ? auth.currentUser.uid : 'dispositivo_' + Math.random().toString(36).substring(7);
+      
+      await db.collection('tokens').doc(userId).set({
+        token: token,
+        nombre: (auth && auth.currentUser && auth.currentUser.displayName) ? auth.currentUser.displayName : 'Usuario KETOCA',
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
 
-        localStorage.setItem('ketoca_fcm_token', token);
-        alert('¡Notificaciones activadas! 🔔 Ya recibirás avisos de pagos.');
-      } else {
-        alert('Primero selecciona quién eres en el grupo (en Ajustes de Perfil).');
-      }
+      localStorage.setItem('ketoca_fcm_token', token);
+      alert('¡Notificaciones push activadas correctamente! 🔔');
     } else {
       alert('No se pudo obtener el token del dispositivo.');
     }
