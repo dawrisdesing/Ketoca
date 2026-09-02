@@ -989,9 +989,9 @@ function buildGastoDetail(){
       <button class="btn btn-sm" onclick="closeModal()"><i class="ti ti-x"></i></button>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <button class="btn btn-sm" onclick="${hasPrev ? 'navegarGasto(-1)' : 'void(0)'}" style="${hasPrev ? '' : 'opacity:.3;cursor:not-allowed'}">← Anterior</button>
+      <button class="btn btn-sm" onclick="navegarGasto(-1)" style="${hasPrev ? '' : 'opacity:.3;cursor:not-allowed;pointer-events:none'}">← Anterior</button>
       <span style="font-size:12px;color:var(--t2)">${idx+1} de ${gs.length}</span>
-     <button class="btn btn-sm" onclick="${hasNext ? 'navegarGasto(1)' : 'void(0)'}" style="${hasNext ? '' : 'opacity:.3;cursor:not-allowed'}">Siguiente →</button>
+     <button class="btn btn-sm" onclick="navegarGasto(1)" style="${hasNext ? '' : 'opacity:.3;cursor:not-allowed;pointer-events:none'}">Siguiente →</button>
     </div>
     <div class="dtab-bar">
       <div class="dtab ${gastoDetailTab==='info'?'active':''}" onclick="switchGastoTab('info')">Detalle</div>
