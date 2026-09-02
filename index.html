@@ -978,18 +978,20 @@ function buildGastoDetail(){
     const g=gGs().find(x=>x.id===selectedGastoId);
     if(!g)return'';
     const gs=gGs();
-    const idx=gs.findIndex(x=>x.id===selectedGastoId);
-    const prev=gs[idx-1],next=gs[idx+1];
-    const pp=fmt(g.amount/(g.split.members.length||1));
+    const idx = gs.findIndex(x => String(x.id) === String(selectedGastoId));
+    const prevIdx = idx - 1;
+    const nextIdx = idx + 1;
+    const hasPrev = prevIdx >= 0;
+    const hasNext = nextIdx < gs.length;
     return`
     <div class="mh">
       <div class="mt2">${g.cat||'/'} ${g.desc}</div>
       <button class="btn btn-sm" onclick="closeModal()"><i class="ti ti-x"></i></button>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <button class="btn btn-sm" onclick="${prev?'navegarGasto(-1)':'void(0)'}" style="${prev?'':'opacity:.3;cursor:not-allowed'}">← Anterior</button>
+      <button class="btn btn-sm" onclick="${hasPrev ? 'navegarGasto(-1)' : 'void(0)'}" style="${hasPrev ? '' : 'opacity:.3;cursor:not-allowed'}">← Anterior</button>
       <span style="font-size:12px;color:var(--t2)">${idx+1} de ${gs.length}</span>
-      <button class="btn btn-sm" onclick="${next?'navegarGasto(1)':'void(0)'}" style="${next?'':'opacity:.3;cursor:not-allowed'}">Siguiente →</button>
+     <button class="btn btn-sm" onclick="${hasNext ? 'navegarGasto(1)' : 'void(0)'}" style="${hasNext ? '' : 'opacity:.3;cursor:not-allowed'}">Siguiente →</button>
     </div>
     <div class="dtab-bar">
       <div class="dtab ${gastoDetailTab==='info'?'active':''}" onclick="switchGastoTab('info')">Detalle</div>
