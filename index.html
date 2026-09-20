@@ -894,7 +894,13 @@ function buildLiquidar(){
       </div>`:''}</div>`;
   }).join(''):`<div class="empty"><i class="ti ti-coin" style="font-size:56px;color:#fbbf24;margin-bottom:12px;display:block"></i><p>${t('noGastos')}</p></div>`}`;
 }
-
+function copiarEnlaceInvitacion() {
+    const input = document.getElementById('inputInvitar');
+    if (!input) return;
+    input.select();
+    navigator.clipboard.writeText(input.value);
+    alert('¡Enlace de invitación copiado al portapapeles!');
+}
 function buildMiembros(){
   const ms=gMs(),b=bal();
   const deletedList = (cg !== null && S.deletedMembers[cg]) ? S.deletedMembers[cg] : [];
@@ -903,6 +909,13 @@ function buildMiembros(){
     <div class="sec" style="margin:0">${t('miembros')}</div>
     <button class="btn btn-sm" onclick="openModal('add-miembro')"><i class="ti ti-user-plus"></i> ${t('addMember')}</button>
   </div>
+  <div class="card" style="margin-bottom:16px; padding:12px;">
+        <div style="font-weight:600; font-size:13px; margin-bottom:6px;">🔗 Enlace de invitación al grupo</div>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <input type="text" id="inputInvitar" readonly value="${window.location.origin}/?invitacion=${activeGroupId}" style="padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-input); font-size:12px; width:100%; color:var(--t1);" />
+            <button class="btn btn-sm" onclick="copiarEnlaceInvitacion()">Copiar</button>
+        </div>
+    </div>
   ${ms.length?ms.map(m=>{const v=b[m.id]||0;return`
     <div class="card-sm" style="display:flex;align-items:center;gap:10px">
       ${avH(m.id,42)}
