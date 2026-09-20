@@ -734,7 +734,7 @@ function buildResumen(){
   </div>
   <div class="sec">${t('lastGastos')}</div>
   <div class="card">${[...gs].reverse().slice(0,4).map(g=>`
-    <div class="row" style="cursor:pointer" onclick="openGastoDetail(${g.id})">
+    <div class="row" style="cursor:pointer" onclick="openGastoDetail('${g.id}')">
       <div style="font-size:26px;flex-shrink:0">${g.cat||'🔧'}</div>
       <div style="flex:1"><div style="font-size:14px;font-weight:600">${g.desc}</div>
       <div style="font-size:12px;color:var(--t2)">${formatDate(g.dateRaw || g.date)} · <span style="color:var(--accent)">${mNm(g.payer)}</span> · ÷${g.split.members.length}</div></div>
