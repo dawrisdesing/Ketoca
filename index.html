@@ -894,18 +894,17 @@ function buildLiquidar(){
       </div>`:''}</div>`;
   }).join(''):`<div class="empty"><i class="ti ti-coin" style="font-size:56px;color:#fbbf24;margin-bottom:12px;display:block"></i><p>${t('noGastos')}</p></div>`}`;
 }
-function copiarEnlaceInvitacion() {
-    const input = document.getElementById('inputInvitar');
-    if (!input || !input.value) {
-        alert('No hay un ID de grupo válido para copiar.');
+function copiarEnlaceGrupoDirecto(grupoId) {
+    if (!grupoId) {
+        alert('Error: El ID del grupo no es válido.');
         return;
     }
-    input.select();
-    input.setSelectionRange(0, 99999); // Para móviles
-    navigator.clipboard.writeText(input.value).then(() => {
-        alert('¡Enlace de invitación copiado al portapapeles!');
+    const enlace = `${window.location.origin}/?invitacion=${grupoId}`;
+    
+    navigator.clipboard.writeText(enlace).then(() => {
+        alert('¡Enlace de invitación al grupo copiado!');
     }).catch(err => {
-        console.error('Error al copiar: ', err);
+        console.error('Error al copiar el enlace:', err);
     });
 }
 function buildMiembros() {
@@ -917,7 +916,8 @@ function buildMiembros() {
     <div class="card" style="margin-bottom:16px; padding:12px;">
         <div style="font-weight:600; font-size:13px; margin-bottom:6px;">🔗 Enlace de invitación al grupo</div>
         <div style="display:flex; gap:8px; align-items:center;">
-            <input type="text" id="inputInvitar" readonly value="${window.location.origin}/?invitacion=${typeof cg !== 'undefined' ? cg : (window.activeGroupId || '')}" style="padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-input); font-size:12px; width:100%; color:var(--t1);" />
+            <input type="text" id="inputInvitar" readonly value="${window.location.origin}/?invitacion=${(typeof activeGroup !== 'undefined' && activeGroup && activeGroup.id) ? activeGroup.id : (typeof cg !== 'undefined' ? cg : '')}" style="padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-input); font-size:12px; width:100%; color:var(--t1);" />
+            <button class="btn btn-sm" onclick="copiarEnlaceInvitacion()">Copiar</button>
         </div>
     </div>
 
@@ -1674,16 +1674,19 @@ function buildModal(){
     <button class="btn btn-p btn-w" style="margin-top:10px" onclick="createGroup()">✅ Crear grupo</button>`);
   }
 
-  if(currentModal==='group-select'){
-    return wrap(`<div class="mh"><div class="mt2">📂 Mis grupos</div><button class="btn btn-sm" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
-    ${S.groups.length?S.groups.map(g=>`<div class="card-sm" style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:8px" onclick="swGrp(${g.id});closeModal()">
-      <span style="font-size:22px">${g.type||'👥'}</span>
-      <div style="flex:1"><div style="font-size:14px;font-weight:700">${g.name}</div>
-      <div style="font-size:12px;color:var(--t2)">${(S.members[g.id]||[]).length} miembros · ${(S.gastos[g.id]||[]).length} gastos</div></div>
-      ${g.id===cg?'<span class="tag tb">activo</span>':''}
-    </div>`).join(''):'<div class="empty" style="padding:1rem 0"><p>Sin grupos aún.</p></div>'}
-    <button class="btn btn-w" style="margin-top:8px" onclick="closeModal();openModal('create-group')">➕ Nuevo grupo</button>`);
-  }
+if(currentModal==='group-select'){
+    return wrap('<div class="mh"><div class="mt2">Mis grupos</div><button class="btn btn-sm" onclick="closeModal()"><i class="ti ti-x"></i></button></div>' +
+    (S.groups.length ? S.groups.map(g => `<div class="card-sm" style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:8px" onclick="swGrp('${g.id}');closeModal()">
+        <span style="font-size:22px">${g.type||'👥'}</span>
+        <div style="flex:1">
+            <div style="font-size:14px;font-weight:700">${g.name}</div>
+            <div style="font-size:12px;color:var(--t2)">${(S.members[g.id]||[]).length} miembros · ${(S.gastos[g.id]||[]).length} gastos</div>
+        </div>
+        ${g.id==cg?'<span class="tag lb">Activo</span>':''}
+        <button class="btn btn-sm" style="margin-left:auto;padding:4px 8px" onclick="event.stopPropagation();copiarEnlaceGrupoDirecto('${g.id}')">🔗 Invitar</button>
+    </div>`).join('') : '<div class="empty"><p>Sin grupos aún.</p></div>') +
+    '<button class="btn btn-w" style="margin-top:8px" onclick="closeModal();openModal(\'create-group\')">➕ Nuevo grupo</button>');
+}
 
   if(currentModal==='del-group'){
     const g=S.groups.find(x=>x.id===delGrpId);if(!g)return'';
