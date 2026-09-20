@@ -902,15 +902,36 @@ function copiarEnlaceInvitacion() {
     alert('¡Enlace de invitación copiado al portapapeles!');
 }
 function buildMiembros() {
+    const hs = typeof gs === 'function' ? gs() : [];
+    const deletedList = (typeof g_null !== 'undefined' && window.S && S.deletedMembers && S.deletedMembers[cg]) ? S.deletedMembers[cg] : [];
+    const mc = (window.activeGroup && window.activeGroup.members) ? window.activeGroup.members : [];
+
     return `
-    <div style="padding: 20px; text-align: center;">
-        <div class="sec" style="margin-bottom: 12px;">🔗 Enlace de invitación al grupo</div>
-        <div style="display:flex; gap:8px; align-items:center; justify-content: center; margin-bottom: 20px;">
-            <input type="text" id="inputInvitar" readonly value="${window.location.origin}/?invitacion=test_grupo" style="padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-input); font-size:12px; width:60%; color:var(--t1);" />
+    <div class="card" style="margin-bottom:16px; padding:12px;">
+        <div style="font-weight:600; font-size:13px; margin-bottom:6px;">🔗 Enlace de invitación al grupo</div>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <input type="text" id="inputInvitar" readonly value="${window.location.origin}/?invitacion=${window.activeGroupId || ''}" style="padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-input); font-size:12px; width:100%; color:var(--t1);" />
             <button class="btn btn-sm" onclick="copiarEnlaceInvitacion()">Copiar</button>
         </div>
-        <div style="font-size: 14px; color: var(--t2);">Sección de miembros simplificada para evitar bloqueos.</div>
-    </div>`;
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="sec">${t('miembros')}</div>
+        <button class="btn btn-sm" onclick="openModal('add miembro')"><i class="ti ti-user-plus"></i> ${t('addMember')}</button>
+    </div>
+
+    ${mc.length ? mc.map(m => {
+        if (!m) return '';
+        return `
+        <div class="card-sm" style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+            <div style="font-size:20px">${typeof avl === 'function' ? avl(m.id, 42) : '👤'}</div>
+            <div style="flex:1">
+                <div style="font-size:14px;font-weight:700">${m.name}</div>
+                <div style="font-size:12px;color:var(--t2)">${m.phone || 'Sin teléfono Bizum'}</div>
+            </div>
+            ${m.id !== (typeof currentUserId !== 'undefined' ? currentUserId : '') ? `<button class="btn btn-sm btn-d" onclick="openRemove('${m.id}')" title="Eliminar"><i class="ti ti-user-minus"></i></button>` : ''}
+        </div>`;
+    }).join('') : `<div class="empty"><i class="ti ti-users" style="font-size:50px;color:#fbbf24;margin-bottom:12px;display:block"></i><p>${t('noMiembros')}</p></div>`}`;
 }
 
 function buildGastoDetail(){
