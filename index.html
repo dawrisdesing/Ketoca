@@ -896,10 +896,17 @@ function buildLiquidar(){
 }
 function copiarEnlaceInvitacion() {
     const input = document.getElementById('inputInvitar');
-    if (!input) return;
+    if (!input || !input.value) {
+        alert('No hay un ID de grupo válido para copiar.');
+        return;
+    }
     input.select();
-    navigator.clipboard.writeText(input.value);
-    alert('¡Enlace de invitación copiado al portapapeles!');
+    input.setSelectionRange(0, 99999); // Para móviles
+    navigator.clipboard.writeText(input.value).then(() => {
+        alert('¡Enlace de invitación copiado al portapapeles!');
+    }).catch(err => {
+        console.error('Error al copiar: ', err);
+    });
 }
 function buildMiembros() {
     const hs = typeof gs === 'function' ? gs() : [];
@@ -910,8 +917,7 @@ function buildMiembros() {
     <div class="card" style="margin-bottom:16px; padding:12px;">
         <div style="font-weight:600; font-size:13px; margin-bottom:6px;">🔗 Enlace de invitación al grupo</div>
         <div style="display:flex; gap:8px; align-items:center;">
-            <input type="text" id="inputInvitar" readonly value="${window.location.origin}/?invitacion=${window.activeGroupId || ''}" style="padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-input); font-size:12px; width:100%; color:var(--t1);" />
-            <button class="btn btn-sm" onclick="copiarEnlaceInvitacion()">Copiar</button>
+            <input type="text" id="inputInvitar" readonly value="${window.location.origin}/?invitacion=${typeof cg !== 'undefined' ? cg : (window.activeGroupId || '')}" style="padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-input); font-size:12px; width:100%; color:var(--t1);" />
         </div>
     </div>
 
