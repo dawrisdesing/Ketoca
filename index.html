@@ -2564,6 +2564,79 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+async function procesarInvitacionPendiente() {
+    const params = new URLSearchParams(window.location.search);
+    const grupoIdInvitacion = params.get('invitacion');
+    
+    if (!grupoIdInvitacion) return;
+
+    console.log("Detectada invitación para el grupo ID:", grupoIdInvitacion);
+
+    // 1. Obtener o asignar ID/Nombre al usuario actual
+    let userId = typeof currentUserId !== 'undefined' && currentUserId ? currentUserId : localStorage.getItem('currentUserId');
+    if (!userId) {
+        userId = 'usr_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('currentUserId', userId);
+    }
+
+    let userName = localStorage.getItem('currentUserName');
+    if (!userName) {
+        userName = prompt('¡Te han invitado a un grupo en Ketoca! Introduce tu nombre para unirte:') || 'Invitado';
+        localStorage.setItem('currentUserName', userName);
+    }
+
+    try {
+        // 2. Referencia al grupo en Firestore
+        const grupoRef = db.collection('grupos').doc(grupoIdInvitacion);
+        const grupoDoc = await grupoRef.get();
+
+        if (grupoDoc.exists) {
+            const grupoData = grupoDoc.data();
+            const miembrosActuales = grupoData.members || [];
+
+            // 3. Comprobar si ya está dentro
+            const yaEsMiembro = miembrosActuales.some(m => m.id === userId);
+
+            if (!yaEsMiembro) {
+                const nuevoMiembro = {
+                    id: userId,
+                    name: userName,
+                    phone: ''
+                };
+
+                // Añadir nuevo miembro en Firestore
+                await grupoRef.update({
+                    members: firebase.firestore.FieldValue.arrayUnion(nuevoMiembro)
+                });
+                alert(`¡Te has unido correctamente al grupo "${grupoData.name || 'compartido'}"!`);
+            }
+
+            // 4. Establecer este grupo como el GRUPO ACTIVO en localStorage y en la app
+            localStorage.setItem('activeGroup', grupoIdInvitacion);
+            if (typeof cg !== 'undefined') cg = grupoIdInvitacion;
+
+            // 5. Limpiar la URL sin recargar de golpe
+            window.history.replaceState({}, document.title, window.location.pathname);
+
+            // 6. Cargar los datos del grupo activo
+            if (typeof loadData === 'function') {
+                await loadData();
+            } else {
+                location.reload();
+            }
+
+        } else {
+            alert('El enlace de invitación no es válido o el grupo ya no existe.');
+        }
+    } catch (error) {
+        console.error("Error al unirse al grupo mediante enlace:", error);
+        alert("No se pudo acceder al grupo. Verifica tu conexión o los permisos.");
+    }
+}
+window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(procesarInvitacionPendiente, 1000);
+});
+
 </script>
 </body>
 </html>
