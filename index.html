@@ -1813,13 +1813,7 @@ function swTabDirect(t){
   });
   render();
 }
-function swGrp(id){
-  cg = id;
-  ME = null; 
-  _syncUserIdentity();
-  render();
-  setTimeout(moveIndicator, 50);
-}
+
 
 function changeActiveUser(id){
   ME = parseInt(id);
@@ -2034,21 +2028,50 @@ function addMiembro(){
   }
   closeModal();
 }
+// ✅ CÓDIGO NUEVO A PEGAR:
+async function createGroup(){
+  const nm = document.getElementById('gr-nm')?.value.trim();
+  const tp = selectedGrpIcon;
+  if(!nm) return; 
 
-function createGroup(){
-  const nm=document.getElementById('gr-nm')?.value.trim();
-  const tp=selectedGrpIcon;
-  if(!nm)return; 
-  const id=S.groups.length?Math.max(...S.groups.map(g=>g.id))+1:0;
-  S.groups.push({id,name:nm,type:tp});
-  S.members[id]=[];
-  S.gastos[id]=[];
-  cg=id;
-  ME=null;
+  // 1. Generar un ID único alfanumérico en Firestore
+  const newGroupRef = db.collection('grupos').doc();
+  const id = newGroupRef.id;
+
+  const userUid = (auth && auth.currentUser) ? auth.currentUser.uid : 'usr_' + Math.random().toString(36).substr(2, 9);
+  const ownerName = userData.name || 'Creador';
+
+  // 2. Guardar el grupo en la colección pública de Firestore para las invitaciones
+  try {
+    await newGroupRef.set({
+      name: nm,
+      type: tp,
+      members: [{ id: userUid, name: ownerName, phone: '' }],
+      createdAt: new Date().toISOString()
+    });
+  } catch(e) {
+    console.error("Error guardando el grupo en Firestore:", e);
+  }
+
+  // 3. Añadir el grupo a la estructura local 'S'
+  if(!S.groups) S.groups = [];
+  S.groups.push({ id: id, name: nm, type: tp });
+  
+  if(!S.members) S.members = {};
+  S.members[id] = [{ id: userUid, name: ownerName, phone: '' }];
+  
+  if(!S.gastos) S.gastos = {};
+  S.gastos[id] = [];
+  
+  cg = id;
+  ME = userUid;
   
   selectedGrpIcon = '👥';
   tempGroupState = null;
+  
+  await save();
   closeModal();
+  render();
 }
 
 function setSplit(type,el){
@@ -2593,7 +2616,7 @@ async function procesarInvitacionPendiente() {
     
     if (!grupoIdInvitacion) return;
 
-    console.log("Detectada invitación para el grupo ID:", grupoIdInvitacion);
+console.log("Detectada invitación para el grupo ID:", grupoIdInvitacion);
 
     // 1. Obtener o asignar ID/Nombre al usuario actual
     let userId = typeof currentUserId !== 'undefined' && currentUserId ? currentUserId : localStorage.getItem('currentUserId');
