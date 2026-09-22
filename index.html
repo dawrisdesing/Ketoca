@@ -907,6 +907,29 @@ function copiarEnlaceGrupoDirecto(grupoId) {
         console.error('Error al copiar el enlace:', err);
     });
 }
+function pasarAlSiguienteGrupo() {
+    if (!S.groups || S.groups.length < 2) return;
+    
+    // 1. Localizar el índice del grupo actual
+    let indexActual = S.groups.findIndex(g => String(g.id) === String(cg));
+    
+    // 2. Calcular el siguiente índice (vuelve al primero si está en el último)
+    let indexSiguiente = (indexActual + 1) % S.groups.length;
+    let grupoSiguiente = S.groups[indexSiguiente];
+    
+    if (grupoSiguiente) {
+        // 3. Cambiar el grupo activo en la app
+        swGrp(grupoSiguiente.id);
+        
+        // 4. Volver a renderizar la vista o modal actual con los nuevos datos
+        if (typeof currentModal !== 'undefined' && currentModal) {
+            openModal(currentModal);
+        } else if (typeof render === 'function') {
+            render();
+        }
+    }
+}
+
 function buildMiembros() {
     const hs = typeof gs === 'function' ? gs() : [];
     const deletedList = (typeof g_null !== 'undefined' && window.S && S.deletedMembers && S.deletedMembers[cg]) ? S.deletedMembers[cg] : [];
@@ -1132,10 +1155,10 @@ function loadExpenseComments(gId) {
 }
 
 function navegarGasto(direccion) {
-    const gs = gGs().slice().reverse();
+    const gs = gGs(); // Mantenemos el mismo orden que en buildGastoDetail
     const idx = gs.findIndex(g => String(g.id) === String(selectedGastoId));
     if (idx === -1) return;
-    
+
     const nuevoIdx = idx + direccion;
     if (nuevoIdx >= 0 && nuevoIdx < gs.length) {
         // Mantenemos la pestaña actual (gastoDetailTab) al cambiar de gasto
