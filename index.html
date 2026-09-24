@@ -1697,18 +1697,32 @@ function buildModal(){
     <button class="btn btn-p btn-w" style="margin-top:10px" onclick="createGroup()">✅ Crear grupo</button>`);
   }
 
-if(currentModal==='group-select'){
-  return wrap('<div class="mh"><div class="mt2">📂 Mis grupos</div><button class="btn btn-sm" onclick="closeModal()"><i class="ti ti-x"></i></button></div>' +
-  (S.groups && S.groups.length ? S.groups.map(g => `
-    <div class="card-sm" style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:8px; ${String(g.id) === String(cg) ? 'border-color:var(--accent);background:var(--accent-bg);' : ''}" onclick="swGrp('${g.id}'); closeModal();">
-      <span style="font-size:22px">${g.type || '👥'}</span>
-      <div style="flex:1">
-        <div style="font-size:14px;font-weight:700">${g.name}</div>
-        <div style="font-size:12px;color:var(--t2)">${(S.members[g.id] || []).length} miembros · ${(S.gastos[g.id] || []).length} gastos</div>
-      </div>
-      ${String(g.id) === String(cg) ? '<span class="tag tb">Activo</span>' : ''}
-    </div>`).join('') : '<div class="empty"><p>Sin grupos aún.</p></div>') +
-  '<button class="btn btn-p btn-w" style="margin-top:8px" onclick="closeModal(); openModal(\'create-group\')">➕ Nuevo grupo</button>');
+if (currentModal === 'group-select') {
+  const grpsHtml = (S.groups && S.groups.length)
+    ? S.groups.map(g => {
+        const isSel = String(g.id) === String(cg);
+        const mCount = (S.members && S.members[g.id]) ? S.members[g.id].length : 0;
+        const gCount = (S.gastos && S.gastos[g.id]) ? S.gastos[g.id].length : 0;
+        return `
+          <div class="card-sm" style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:8px; ${isSel ? 'border-color:var(--accent);background:var(--accent-bg);' : ''}" onclick="window.swGrp('${g.id}')">
+            <span style="font-size:22px;pointer-events:none">${g.type || '👥'}</span>
+            <div style="flex:1;pointer-events:none">
+              <div style="font-size:14px;font-weight:700">${g.name}</div>
+              <div style="font-size:12px;color:var(--t2)">${mCount} miembros · ${gCount} gastos</div>
+            </div>
+            ${isSel ? '<span class="tag tb" style="pointer-events:none">Activo</span>' : ''}
+          </div>`;
+      }).join('')
+    : '<div class="empty"><p>Sin grupos aún.</p></div>';
+
+  return wrap(`
+    <div class="mh">
+      <div class="mt2">📂 Mis grupos</div>
+      <button class="btn btn-sm" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    ${grpsHtml}
+    <button class="btn btn-p btn-w" style="margin-top:8px" onclick="closeModal(); tempGroupState=null; openModal('create-group')">➕ Nuevo grupo</button>
+  `);
 }
   if(currentModal==='del-group'){
     const g=S.groups.find(x=>x.id===delGrpId);if(!g)return'';
@@ -2681,6 +2695,21 @@ console.log("Detectada invitación para el grupo ID:", grupoIdInvitacion);
 window.addEventListener('DOMContentLoaded', () => {
     setTimeout(procesarInvitacionPendiente, 1000);
 });
+
+function swGrp(id) {
+  cg = String(id);
+  currentModal = null; // Cierra la ventana emergente
+  
+  if (typeof S !== 'undefined' && S.groups) {
+    window.activeGroup = S.groups.find(g => String(g.id) === String(id)) || null;
+  }
+  
+  ME = null;
+  if (typeof _syncUserIdentity === 'function') _syncUserIdentity();
+  if (typeof render === 'function') render(true);
+}
+// Hacerla accesible globalmente desde los eventos onclick
+window.swGrp = swGrp;
 
 </script>
 </body>
