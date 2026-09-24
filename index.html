@@ -791,176 +791,96 @@ function buildBalances(){
 
 function buildLiquidar(){
   _syncUserIdentity();
-  const sets=settlements();
-  const ms=gMs();
-  const conf=sets.filter(s=>payments[pkey(s)]?.status==='confirmed').length;
-  const done=sets.length===0||(sets.length>0&&conf===sets.length);
-  return`
+  const sets = getOptimizedBalances(cg);
+  const ms = gMs();
+  const conf = sets.filter(s => payments[pkey(s)]?.status === 'confirmed').length;
+  const done = sets.length === 0 || (sets.length > 0 && conf === sets.length);
+
+  return `
   <div class="ib" style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px">
     <div style="display:flex;align-items:center;gap:8px">
       <span style="font-size:24px">👤</span>
       <div>
         <div style="font-size:12px;color:var(--accent)">Viendo como:</div>
-        <div style="font-size:14px;font-weight:700;color:var(--accent)">${ME!==null?mNm(ME):'—'}</div>
+        <div style="font-size:14px;font-weight:700;color:var(--accent)">${ME !== null ? mNm(ME) : '—'}</div>
       </div>
     </div>
     <select onchange="changeActiveUser(this.value)" style="width:auto;padding:6px 10px;font-size:12px;background:var(--s2);color:var(--t1);border:.5px solid var(--accent-bd);border-radius:6px">
-      ${ms.map(m=>`<option value="${m.id}" ${ME===m.id?'selected':''}>Cambiar a ${m.name.split(' ')[0]}</option>`).join('')}
+      ${ms.map(m => `<option value="${m.id}" ${String(ME) === String(m.id) ? 'selected' : ''}>Cambiar a${m.name.split(' ')[0]}</option>`).join('')}
     </select>
   </div>
-  <div class="${done?'ob':'ib'}">
+  <div class="${done ? 'ob' : 'ib'}">
     <div style="display:flex;align-items:center;gap:8px">
-      <span style="font-size:24px">${done?'🎉':'💸'}</span>
+      <span style="font-size:24px">${done ? '🎉' : '💸'}</span>
       <div>
-        <div style="font-size:14px;font-weight:700;color:var(--${done?'ok':'accent'})">${done?t('allSettled'):sets.length-conf+' pendiente(s)'}</div>
+        <div style="font-size:14px;font-weight:700;color:var(--${done ? 'ok' : 'accent'})">${done ? t('allSettled') : (sets.length - conf) + ' pago(s) pendiente(s)'}</div>
       </div>
     </div>
   </div>
-  <div class="sec">💳 ${t('transfers')}</div>
-  ${sets.length?sets.map(s=>{
-    const k=pkey(s),p=payments[k]||null,st=p?.status||'pending';
-    const iPay=s.from===ME,iGet=s.to===ME;
-    const rec=mBy(s.to),sender=mBy(s.from);
-    const steps=`<div class="ss">
-      <div class="sd ${st!=='pending'?'done':'act'}"><i class="ti ti-send" style="font-size:11px"></i></div>
-      <div class="sl ${st!=='pending'?'done':''}"></div>
-      <div class="sd ${st==='confirmed'?'done':st==='sent'?'act':'idle'}"><i class="ti ti-eye" style="font-size:11px"></i></div>
-      <div class="sl ${st==='confirmed'?'done':''}"></div>
-      <div class="sd ${st==='confirmed'?'done':'idle'}"><i class="ti ti-check" style="font-size:11px"></i></div>
-      <span style="font-size:11px;color:var(--t2);margin-left:8px">${st==='pending'?'⏳ Pendiente':st==='sent'?'📨 Enviado · esperando…':'✅ Confirmado'}</span>
+  <div class="sec">💳 ${t('transfers')} (${sets.length} pagas optimizadas)</div>
+  ${sets.length ? sets.map(s => {
+    const k = pkey(s), p = payments[k] || null, st = p?.status || 'pending';
+    const iPay = String(s.from) === String(ME), iGet = String(s.to) === String(ME);
+    const rec = mBy(s.to), sender = mBy(s.from);
+    const steps = `<div class="ss">
+      <div class="sd ${st !== 'pending' ? 'done' : 'act'}"><i class="ti ti-send" style="font-size:11px"></i></div>
+      <div class="sl ${st !== 'pending' ? 'done' : ''}"></div>
+      <div class="sd ${st === 'confirmed' ? 'done' : st === 'sent' ? 'act' : 'idle'}"><i class="ti ti-eye" style="font-size:11px"></i></div>
+      <div class="sl ${st === 'confirmed' ? 'done' : ''}"></div>
+      <div class="sd ${st === 'confirmed' ? 'done' : 'idle'}"><i class="ti ti-check" style="font-size:11px"></i></div>
+      <span style="font-size:11px;color:var(--t2);margin-left:8px">${st === 'pending' ? '⏳ Pendiente' : st === 'sent' ? '📨 Enviado' : '✅ Confirmado'}</span>
     </div>`;
     
-    if(st==='confirmed')return`<div class="pc done">
+    if (st === 'confirmed') return `<div class="pc done">
       <div style="display:flex;align-items:center;gap:10px">${avH(s.from)}<span style="color:var(--ok)">→</span>${avH(s.to)}
-      <div style="flex:1"><div style="font-size:14px;font-weight:600;color:var(--ok)">${mNm(s.from)} → ${mNm(s.to)}</div>
-      <div style="font-size:12px;color:var(--ok)">Via ${p.method==='bizum'?'💙 Bizum':'🏦 Transf.'} · ${p.confirmedAt}</div></div>
+      <div style="flex:1"><div style="font-size:14px;font-weight:600;color:var(--ok)">${mNm(s.from)} →${mNm(s.to)}</div>
+      <div style="font-size:12px;color:var(--ok)">Via ${p.method === 'bizum' ? '💙 Bizum' : '🏦 Transf.'} · ${p.confirmedAt}</div></div>
       <span class="tag tg">✅ OK</span></div>${steps}</div>`;
       
-    if(st==='sent') {
+    if (st === 'sent') {
       let waLink = '';
-      if(rec?.phone && iPay) {
-        const cleanPhone = rec.phone.replace(/\s+/g,'');
+      if (rec?.phone && iPay) {
+        const cleanPhone = rec.phone.replace(/\s+/g, '');
         const mName = p.method === 'bizum' ? 'Bizum' : 'transferencia';
-        const msg = encodeURIComponent(`¡Hola! Te acabo de enviar €${s.amount.toFixed(2)} por ${mName} desde KETOCA 🤝. Por favor, confírmalo en tu app cuando te llegue. ¡Gracias!`);
+        const msg = encodeURIComponent(`¡Hola! Te acabo de enviar €${s.amount.toFixed(2)} por${mName} desde KETOCA 🤝. Por favor, confírmalo en tu app.`);
         waLink = `https://wa.me/${cleanPhone}?text=${msg}`;
       }
       
-      return`<div class="pc sent">
+      return `<div class="pc sent">
       <div style="display:flex;align-items:center;gap:10px">${avH(s.from)}<span style="color:var(--warn)">→</span>${avH(s.to)}
-      <div style="flex:1"><div style="font-size:14px;font-weight:600;color:var(--warn)">${mNm(s.from)} → ${mNm(s.to)}</div>
-      <div style="font-size:12px;color:var(--warn)">${p.method==='bizum'?'💙 Bizum':'🏦 Transf.'} · ${fmt(s.amount)}</div></div>
-      <span class="tag ta">⏳ Espera</span></div>${steps}
-      ${iGet?`<div style="border-top:.5px solid var(--warn-bd);margin-top:10px;padding-top:10px">
+      <div style="flex:1"><div style="font-size:14px;font-weight:600;color:var(--warn)">${mNm(s.from)} →${mNm(s.to)}</div>
+      <div style="font-size:12px;color:var(--warn)">${p.method === 'bizum' ? '💙 Bizum' : '🏦 Transf.'} · ${fmt(s.amount)}</div></div>
+      <span class="tag ta">⏳ Espera</span></div>${steps}${iGet ? `<div style="border-top:.5px solid var(--warn-bd);margin-top:10px;padding-top:10px">
         <div style="font-size:13px;font-weight:700;margin-bottom:8px">👆 ${mNm(s.from).split(' ')[0]} dice que ya te pagó — ¿confirmas?</div>
         <div class="g2">
           <button class="btn btn-sm btn-d" onclick="dispute('${k}')">❌ No recibido</button>
           <button class="btn btn-sm btn-ok" onclick="confirmPay('${k}')">✅ Confirmar recibo</button>
-        </div></div>`:iPay?`<div style="font-size:12px;color:var(--warn);margin-top:8px;padding-top:8px;border-top:.5px solid var(--warn-bd)">⏳ Esperando que ${mNm(s.to).split(' ')[0]} confirme…</div>
-        ${rec?.phone?`<div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:8px;"><span style="font-size:13px;font-weight:700;color:var(--t2);">Volver a avisar 👉</span><a href="${waLink}" target="_blank" style="width:40px;height:40px;border-radius:50%;background:#25d366;display:flex;align-items:center;justify-content:center;text-decoration:none;box-shadow:0 2px 8px rgba(37,211,102,.4);flex-shrink:0;"><span style="font-size:20px;">📲</span></a></div>`:''}
-        </div>`:''}</div>`;
-    }
-    
-    let waClaimLink = '';
-    if (sender?.phone && iGet) {
-        const cleanPhone = sender.phone.replace(/\s+/g,'');
-        const msg = encodeURIComponent(`¡Hola! Te escribo por KETOCA 🤝. Recuerda enviarme los €${s.amount.toFixed(2)} pendientes cuando puedas. ¡Gracias!`);
-        waClaimLink = `https://wa.me/${cleanPhone}?text=${msg}`;
+        </div></div>` : iPay ? `<div style="font-size:12px;color:var(--warn);margin-top:8px;padding-top:8px;border-top:.5px solid var(--warn-bd)">⏳ Esperando confirmación de ${mNm(s.to).split(' ')[0]}...</div>
+        ${rec?.phone ? `<div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:8px;"><span style="font-size:13px;font-weight:700;color:var(--t2);">Recordar 👉</span><a href="${waLink}" target="_blank" style="width:36px;height:36px;border-radius:50%;background:#25d366;display:flex;align-items:center;justify-content:center;text-decoration:none;"><span style="font-size:18px;">📲</span></a></div>` : ''}` : ''}</div>`;
     }
 
-    return`<div class="pc">
+    return `<div class="pc">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        ${avH(s.from,42)}<span style="color:var(--accent);font-size:20px;flex-shrink:0">→</span>${avH(s.to,42)}
-        <div style="flex:1"><div style="font-size:14px;font-weight:600">${mNm(s.from)} debe a ${mNm(s.to)}</div>
+        ${avH(s.from, 42)}<span style="color:var(--accent);font-size:20px;flex-shrink:0">→</span>${avH(s.to, 42)}
+        <div style="flex:1"><div style="font-size:14px;font-weight:600">${mNm(s.from)} debe a${mNm(s.to)}</div>
         <div class="neg" style="font-size:18px">${fmt(s.amount)}</div></div>
-      </div>${steps}
-      ${iPay?`<div style="border-top:.5px solid var(--bd);margin-top:10px;padding-top:10px">
-        <div style="font-size:13px;font-weight:700;margin-bottom:10px">💳 Pagar a ${mNm(s.to).split(' ')[0]}${rec?.phone?' · '+rec.phone:''}:</div>
+      </div>${steps}${iPay ? `<div style="border-top:.5px solid var(--bd);margin-top:10px;padding-top:10px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px">💳 Pagar a ${mNm(s.to).split(' ')[0]}${rec?.phone ? ' · ' + rec.phone : ''}:</div>
         <div class="pm">
-          ${rec?.phone?`<button class="pmb" onclick="openPayModal('${k}','bizum')">
+          ${rec?.phone ? `<button class="pmb" onclick="openPayModal('${k}','bizum')">
             <div style="font-size:28px;margin-bottom:6px">💙</div>
             <div>Bizum</div>
-            <div style="font-size:11px;color:var(--t2);margin-top:2px">${rec.phone}</div></button>`:''}
+            <div style="font-size:11px;color:var(--t2);margin-top:2px">${rec.phone}</div></button>` : ''}
           <button class="pmb" onclick="openPayModal('${k}','transfer')">
             <div style="font-size:28px;margin-bottom:6px">🏦</div>
             <div>Transferencia</div>
             <div style="font-size:11px;color:var(--t2);margin-top:2px">Banco</div></button>
         </div></div>`
-      :iGet?`<div style="border-top:.5px solid var(--bd);margin-top:10px;padding-top:10px;display:flex;flex-direction:column;gap:8px">
-        <div style="font-size:13px;color:var(--t2)">⏳ Esperando que ${mNm(s.from).split(' ')[0]} te pague…</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-          <button class="btn btn-sm btn-ok" onclick="received('${k}')" style="flex:1;">✅ Confirmar pago</button>
-          ${sender?.phone?`<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:12px;font-weight:700;color:var(--t2);">Reclamar 👉</span><a href="${waClaimLink}" target="_blank" style="width:36px;height:36px;border-radius:50%;background:#25d366;display:flex;align-items:center;justify-content:center;text-decoration:none;box-shadow:0 2px 8px rgba(37,211,102,.4);flex-shrink:0;"><span style="font-size:18px;">📲</span></a></div>`:''}
-        </div>
-      </div>`:''}</div>`;
-  }).join(''):`<div class="empty"><i class="ti ti-coin" style="font-size:56px;color:#fbbf24;margin-bottom:12px;display:block"></i><p>${t('noGastos')}</p></div>`}`;
-}
-function copiarEnlaceGrupoDirecto(grupoId) {
-    if (!grupoId) {
-        alert('Error: El ID del grupo no es válido.');
-        return;
-    }
-    const enlace = `${window.location.origin}/?invitacion=${grupoId}`;
-    
-    navigator.clipboard.writeText(enlace).then(() => {
-        alert('¡Enlace de invitación al grupo copiado!');
-    }).catch(err => {
-        console.error('Error al copiar el enlace:', err);
-    });
-}
-function pasarAlSiguienteGrupo() {
-    if (!S.groups || S.groups.length < 2) return;
-    
-    // 1. Localizar el índice del grupo actual
-    let indexActual = S.groups.findIndex(g => String(g.id) === String(cg));
-    
-    // 2. Calcular el siguiente índice (vuelve al primero si está en el último)
-    let indexSiguiente = (indexActual + 1) % S.groups.length;
-    let grupoSiguiente = S.groups[indexSiguiente];
-    
-    if (grupoSiguiente) {
-        // 3. Cambiar el grupo activo en la app
-        swGrp(grupoSiguiente.id);
-        
-        // 4. Volver a renderizar la vista o modal actual con los nuevos datos
-        if (typeof currentModal !== 'undefined' && currentModal) {
-            openModal(currentModal);
-        } else if (typeof render === 'function') {
-            render();
-        }
-    }
-}
-
-function buildMiembros() {
-    const hs = typeof gs === 'function' ? gs() : [];
-    const deletedList = (typeof g_null !== 'undefined' && window.S && S.deletedMembers && S.deletedMembers[cg]) ? S.deletedMembers[cg] : [];
-    const mc = (window.activeGroup && window.activeGroup.members) ? window.activeGroup.members : [];
-
-    return `
-    <div class="card" style="margin-bottom:16px; padding:12px;">
-        <div style="font-weight:600; font-size:13px; margin-bottom:6px;">🔗 Enlace de invitación al grupo</div>
-        <div style="display:flex; gap:8px; align-items:center;">
-            <input type="text" id="inputInvitar" readonly value="${window.location.origin}/?invitacion=${(typeof activeGroup !== 'undefined' && activeGroup && activeGroup.id) ? activeGroup.id : (typeof cg !== 'undefined' ? cg : '')}" style="padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-input); font-size:12px; width:100%; color:var(--t1);" />
-            <button class="btn btn-sm" onclick="copiarEnlaceInvitacion()">Copiar</button>
-        </div>
-    </div>
-
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div class="sec">${t('miembros')}</div>
-        <button class="btn btn-sm" onclick="openModal('add miembro')"><i class="ti ti-user-plus"></i> ${t('addMember')}</button>
-    </div>
-
-    ${mc.length ? mc.map(m => {
-        if (!m) return '';
-        return `
-        <div class="card-sm" style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-            <div style="font-size:20px">${typeof avl === 'function' ? avl(m.id, 42) : '👤'}</div>
-            <div style="flex:1">
-                <div style="font-size:14px;font-weight:700">${m.name}</div>
-                <div style="font-size:12px;color:var(--t2)">${m.phone || 'Sin teléfono Bizum'}</div>
-            </div>
-            ${m.id !== (typeof currentUserId !== 'undefined' ? currentUserId : '') ? `<button class="btn btn-sm btn-d" onclick="openRemove('${m.id}')" title="Eliminar"><i class="ti ti-user-minus"></i></button>` : ''}
-        </div>`;
-    }).join('') : `<div class="empty"><i class="ti ti-users" style="font-size:50px;color:#fbbf24;margin-bottom:12px;display:block"></i><p>${t('noMiembros')}</p></div>`}`;
+      : iGet ? `<div style="border-top:.5px solid var(--bd);margin-top:10px;padding-top:10px;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:12px;color:var(--t2)">⏳ Esperando pago...</span>
+        <button class="btn btn-sm btn-ok" onclick="received('${k}')">✅ Confirmar recibido</button>
+      </div>` : ''}</div>`;
+  }).join('') : `<div class="empty"><i class="ti ti-coin" style="font-size:56px;color:#fbbf24;margin-bottom:12px;display:block"></i><p>${t('allSettled')}</p></div>`}`;
 }
 
 function buildGastoDetail(){
@@ -2725,6 +2645,52 @@ function swGrp(id) {
 // Asegurar que esté disponible globalmente
 window.swGrp = swGrp;
 
+// Algoritmo para simplificar deudas al mínimo número de transferencias
+function getOptimizedBalances(groupId) {
+  const ms = S.members[groupId] || [];
+  const gs = S.gastos[groupId] || [];
+  if (!ms.length) return [];
+
+  const b = {};
+  ms.forEach(m => b[m.id] = 0);
+
+  gs.forEach(g => {
+    const num = (g.split && g.split.members) ? g.split.members.length : 1;
+    const pp = g.amount / (num || 1);
+    if (b[g.payer] !== undefined) b[g.payer] += g.amount;
+    if (g.split && g.split.members) {
+      g.split.members.forEach(id => {
+        if (b[id] !== undefined) b[id] -= pp;
+      });
+    }
+  });
+
+  const debtors = [], creditors = [];
+  Object.entries(b).forEach(([id, v]) => {
+    const n = parseFloat(v.toFixed(2));
+    if (n < -0.01) debtors.push({ id: String(id), amount: -n });
+    else if (n > 0.01) creditors.push({ id: String(id), amount: n });
+  });
+
+  debtors.sort((a, b) => b.amount - a.amount);
+  creditors.sort((a, b) => b.amount - a.amount);
+
+  const res = [];
+  let i = 0, j = 0;
+  while (i < debtors.length && j < creditors.length) {
+    const pay = Math.min(debtors[i].amount, creditors[j].amount);
+    res.push({
+      from: debtors[i].id,
+      to: creditors[j].id,
+      amount: parseFloat(pay.toFixed(2))
+    });
+    debtors[i].amount -= pay;
+    creditors[j].amount -= pay;
+    if (debtors[i].amount < 0.01) i++;
+    if (creditors[j].amount < 0.01) j++;
+  }
+  return res;
+}
 </script>
 </body>
 </html>
