@@ -2697,18 +2697,32 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 function swGrp(id) {
+  // 1. Cambiar el ID del grupo activo
   cg = String(id);
-  currentModal = null; // Cierra la ventana emergente
   
+  // 2. Cerrar el modal emergente
+  currentModal = null;
+  
+  // 3. Buscar y asignar el objeto del grupo activo
   if (typeof S !== 'undefined' && S.groups) {
     window.activeGroup = S.groups.find(g => String(g.id) === String(id)) || null;
   }
   
+  // 4. Resetear la identidad activa dentro del grupo
   ME = null;
   if (typeof _syncUserIdentity === 'function') _syncUserIdentity();
-  if (typeof render === 'function') render(true);
+  
+  // 5. Guardar la selección localmente y forzar el renderizado completo de la interfaz
+  if (typeof save === 'function') save();
+  if (typeof render === 'function') render();
+  
+  // 6. Mover el indicador inferior si existe
+  setTimeout(() => {
+    if (typeof moveIndicator === 'function') moveIndicator();
+  }, 50);
 }
-// Hacerla accesible globalmente desde los eventos onclick
+
+// Asegurar que esté disponible globalmente
 window.swGrp = swGrp;
 
 </script>
